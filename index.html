@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>ReceiptSplit — Snap receipts, split spending, stay on budget</title>
+<meta name="description" content="Snap a photo of any receipt. Auto-split items into budget categories, confirm, and track against monthly income." />
+<meta name="theme-color" content="#4f46e5" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="ReceiptSplit" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icons/icon-180.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="bg-glow" aria-hidden="true"></div>
+<header class="app-header">
+  <div class="brand">
+    <div class="logo">🧾</div>
+    <div>
+      <h1>ReceiptSplit</h1>
+      <p>Snap · Split · Stay on budget</p>
+    </div>
+  </div>
+  <div class="header-right">
+  <button class="share-btn" id="shareBtn" type="button" title="Share &amp; sync live with a partner"><span class="dot" id="shareDot"></span><span id="shareLabel">Share</span></button>
+  <div class="header-stats" id="headerStats">
+    <div class="hstat"><span class="hstat-label">Month spent</span><strong id="hSpent">$0.00</strong></div>
+    <div class="hstat"><span class="hstat-label">Income</span><strong id="hIncome">$0.00</strong></div>
+    <div class="hstat"><span class="hstat-label">Left</span><strong id="hLeft">$0.00</strong></div>
+  </div>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Main sections">
+  <button class="tab active" data-tab="scan" role="tab" aria-selected="true">📸 <span>Scanner</span></button>
+  <button class="tab" data-tab="budget" role="tab" aria-selected="false">💰 <span>Budget</span></button>
+  <button class="tab" data-tab="history" role="tab" aria-selected="false">📊 <span>History</span></button>
+</nav>
+
+<main>
+  <!-- ============ SCANNER TAB ============ -->
+  <section id="tab-scan" class="panel active" role="tabpanel">
+    <div class="grid-2">
+      <div class="card">
+        <h2>1 · Snap or upload a receipt</h2>
+        <p class="muted">Take a photo, upload an image, paste receipt text, or try the demo. Everything runs in your browser.</p>
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload receipt image">
+          <input type="file" id="fileInput" accept="image/*,.heic,.heif" capture="environment" hidden />
+          <div class="dz-inner">
+            <div class="dz-icon">📷</div>
+            <p><strong>Drag &amp; drop</strong> a receipt photo here,<br/>or <button type="button" class="link" id="browseBtn">browse files</button> · <button type="button" class="link" id="cameraBtn">use camera</button></p>
+            <small>JPG, PNG, HEIC, WebP — stays on this device</small>
+          </div>
+        </div>
+        <div class="img-error hidden" id="imgError" role="alert"></div>
+        <div class="img-preview-wrap hidden" id="imgPreviewWrap">
+          <img id="imgPreview" alt="Receipt preview" />
+          <div class="img-actions">
+            <button class="btn ghost sm" id="removeImgBtn" type="button">✕ Remove photo</button>
+            <span class="muted sm" id="imgMeta"></span>
+          </div>
+        </div>
+        <div class="row wrap gap">
+          <button class="btn primary" id="ocrBtn" type="button" disabled>✨ Scan receipt with OCR</button>
+          <button class="btn" id="demoBtn" type="button">🧪 Try demo receipt</button>
+        </div>
+        <div class="ocr-status hidden" id="ocrStatus"><div class="spinner"></div><span id="ocrStatusText">Loading OCR engine…</span><div class="progress"><div id="ocrBar"></div></div></div>
+        <details class="paste-box">
+          <summary>No photo handy? Paste receipt text instead</summary>
+          <textarea id="pasteText" rows="6" placeholder="MILK 2 GAL ............ 5.49&#10;DEWALT DRILL BIT SET .. 24.97&#10;USB-C CABLE 6FT ....... 9.99&#10;BANANAS 2 LB .......... 1.78&#10;SUBTOTAL ............. 42.23"></textarea>
+          <button class="btn sm" id="parsePasteBtn" type="button">Parse pasted text →</button>
+        </details>
+      </div>
+
+      <div class="card">
+        <h2>2 · Review &amp; confirm categories</h2>
+        <p class="muted">We auto-assign a category to every line. <strong>Fix anything wrong, then confirm</strong> — nothing is saved until you approve.</p>
+        <div class="empty" id="emptyItems">
+          <div class="empty-icon">🧾</div>
+          <p><strong>No items yet.</strong><br/>Upload a photo and hit “Scan”, try the demo, or add items manually below.</p>
+        </div>
+        <div id="reviewWrap" class="hidden">
+          <div class="review-toolbar">
+            <label>Store <input id="storeInput" type="text" placeholder="e.g. SuperMart" value="SuperMart" /></label>
+            <label>Date <input id="dateInput" type="date" /></label>
+          </div>
+          <div class="table-wrap">
+            <table class="items-table" aria-label="Receipt items for confirmation">
+              <thead><tr><th>Item</th><th class="num">Price</th><th>Category</th><th></th></tr></thead>
+              <tbody id="itemsBody"></tbody>
+            </table>
+          </div>
+          <div class="add-row">
+            <input id="newName" type="text" placeholder="+ Add item manually (e.g. AA batteries)" />
+            <input id="newPrice" type="number" min="0" step="0.01" placeholder="$" />
+            <button class="btn sm" id="addItemBtn" type="button">Add</button>
+          </div>
+          <div class="cat-summary" id="catSummary"></div>
+          <div class="total-row"><span>Receipt total</span><strong id="reviewTotal">$0.00</strong></div>
+          <div class="row gap">
+            <button class="btn success big" id="confirmBtn" type="button">✅ Confirm &amp; save to budget</button>
+            <button class="btn ghost" id="clearItemsBtn" type="button">Clear</button>
+          </div>
+          <p class="fineprint">Saving splits each item into its confirmed category so the Budget tab updates instantly.</p>
+        </div>
+      </div>
+    </div>
+    <div class="card how">
+      <h3>How auto-categorization works</h3>
+      <div class="chips" id="ruleChips"></div>
+      <p class="muted sm">Keyword rules run 100% locally (milk → Groceries, drill → Household &amp; Hardware, cable → Electronics…). Anything unmatched lands in <strong>Other</strong> for you to confirm. Totals, tax, change and payment lines are ignored automatically.</p>
+    </div>
+  </section>
+
+  <!-- ============ BUDGET TAB ============ -->
+  <section id="tab-budget" class="panel" role="tabpanel">
+    <div class="grid-2">
+      <div class="card">
+        <h2>Monthly income &amp; plan</h2>
+        <p class="muted">Set take-home pay, then split it across categories. Bars show real spending from confirmed receipts.</p>
+        <div class="income-row">
+          <label>Monthly take-home income
+            <div class="money-input"><span>$</span><input id="incomeInput" type="number" min="0" step="10" value="4200" /></div>
+          </label>
+          <label>Month viewed
+            <input id="monthInput" type="month" />
+          </label>
+        </div>
+        <div class="alloc-bar" id="allocBar" title="Budget allocation"></div>
+        <div class="alloc-meta"><span id="allocText">$0 budgeted</span><span id="unallocText">$0 unallocated</span></div>
+        <div class="row wrap gap">
+          <button class="btn sm" id="suggestBtn" type="button">🪄 Suggest 50/30/20 split</button>
+          <button class="btn sm ghost" id="zeroBtn" type="button">Reset budgets</button>
+        </div>
+        <div id="budgetEditors"></div>
+      </div>
+      <div class="card">
+        <h2>Spending vs. budget <span class="pill" id="monthPill"></span></h2>
+        <div class="donut-wrap">
+          <svg id="donut" viewBox="0 0 120 120" width="150" height="150" role="img" aria-label="Budget usage donut"></svg>
+          <div class="donut-center"><strong id="donutPct">0%</strong><span>used</span></div>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi"><span>Budgeted</span><strong id="kBudgeted">$0</strong></div>
+          <div class="kpi"><span>Spent</span><strong id="kSpent">$0</strong></div>
+          <div class="kpi"><span>Remaining</span><strong id="kLeft">$0</strong></div>
+        </div>
+        <div id="budgetBars"></div>
+        <div class="alert hidden" id="overAlert"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY TAB ============ -->
+  <section id="tab-history" class="panel" role="tabpanel">
+    <div class="card">
+      <div class="hist-head">
+        <h2>Saved receipts &amp; spending</h2>
+        <div class="row gap">
+          <select id="histFilter" aria-label="Filter by category"><option value="">All categories</option></select>
+          <button class="btn sm ghost" id="exportBtn" type="button">⬇ Export</button>
+          <button class="btn sm ghost" id="wipeBtn" type="button">🗑 Clear all</button>
+        </div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi"><span>Receipts</span><strong id="kCount">0</strong></div>
+        <div class="kpi"><span>Total scanned</span><strong id="kTotal">$0</strong></div>
+        <div class="kpi"><span>Top category</span><strong id="kTop">—</strong></div>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span>ReceiptSplit · private by default (localStorage). Sharing uses an encrypted peer-to-peer link — no account, nothing stored on a server.</span>
+  <button class="link" id="seedBtn" type="button">reload sample data</button>
+</footer>
+
+<div class="modal-back hidden" id="shareModal" role="dialog" aria-modal="true" aria-label="Share and sync">
+  <div class="modal card">
+    <div class="modal-head">
+      <h2>👥 Share household budget</h2>
+      <button class="icon-btn" id="shareClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <p class="muted sm">Sync live with one other person over an encrypted peer-to-peer link — no account, no server storing your data. Edits on either side appear on both, even at the same time.</p>
+    <div id="shareSetup">
+      <label class="fld">Your name
+        <input id="nameInput" type="text" maxlength="24" placeholder="e.g. Maya" autocomplete="off" />
+      </label>
+      <button class="btn primary big" id="createBtn" type="button">➕ Create room &amp; get code</button>
+      <div class="divider"><span>or join a room</span></div>
+      <div class="join-row">
+        <input id="joinCode" type="text" maxlength="6" placeholder="6-letter code" autocapitalize="characters" autocomplete="off" spellcheck="false" />
+        <button class="btn" id="joinBtn" type="button">Join →</button>
+      </div>
+    </div>
+    <div id="shareRoom" class="hidden">
+      <div class="room-top">
+        <div>
+          <div class="room-code" id="roomCode">······</div>
+          <div class="muted sm" id="hostBadge">You are hosting</div>
+        </div>
+        <div class="peer-list" id="peerList"></div>
+      </div>
+      <label class="fld">Invite link (partner opens this, enters their name, hits Join)
+        <div class="join-row">
+          <input id="roomLink" type="text" readonly />
+          <button class="btn sm" id="copyLinkBtn" type="button">📋 Copy</button>
+        </div>
+      </label>
+      <button class="btn ghost sm" id="leaveBtn" type="button">Leave room</button>
+    </div>
+    <p class="share-status" id="shareStatus" aria-live="polite"></p>
+    <p class="fineprint">⚠ Anyone with the code can read &amp; edit this budget — only share with someone you trust. If one side is offline, its edits sync over automatically once both apps are open again.</p>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts" aria-live="polite"></div>
+
+<script src="app.js"></script>
+<script src="share.js"></script>
+<script src="pwa.js"></script>
+</body>
+</html>
