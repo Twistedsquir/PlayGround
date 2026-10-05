@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Monthly Budget Planner</title>
+<meta name="description" content="Split monthly take-home pay across normal expenses. Totals never exceed income. Installable, works offline." />
+<meta name="theme-color" content="#0f172a" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="icon" type="image/svg+xml" href="./icon.svg" />
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png" />
+<link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Budget" />
+<style>
+  :root{
+    --bg:#0f172a; --card:#1e293b; --card2:#0b1220; --border:#334155;
+    --text:#f1f5f9; --muted:#94a3b8; --accent:#22c55e; --accent2:#38bdf8;
+    --warn:#f59e0b; --danger:#ef4444;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family: ui-sans-system, -apple-system, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+    background: radial-gradient(1200px 600px at 20% -10%, #1e3a5f 0%, transparent 60%),
+                radial-gradient(1000px 500px at 90% 0%, #134e2a 0%, transparent 55%),
+                var(--bg);
+    color:var(--text); min-height:100vh;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:28px 18px 60px}
+  header{display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:18px}
+  h1{margin:0; font-size:clamp(24px,3.5vw,34px); letter-spacing:-.02em}
+  .sub{color:var(--muted); margin:6px 0 0; font-size:14.5px}
+  .badge{font-size:12px; color:#052e16; background:var(--accent); padding:6px 10px; border-radius:999px; font-weight:700}
+  .grid{display:grid; grid-template-columns: 360px 1fr; gap:16px}
+  @media(max-width:900px){ .grid{grid-template-columns:1fr} }
+  .card{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)), var(--card);
+    border:1px solid var(--border); border-radius:var(--radius); padding:18px; box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .card h2{margin:0 0 12px; font-size:16px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted)}
+  label.lbl{display:block; font-size:13px; color:var(--muted); margin:12px 0 6px; font-weight:600}
+  input[type=number], input[type=text]{
+    width:100%; background:var(--card2); border:1px solid var(--border); color:var(--text);
+    padding:12px 12px; border-radius:10px; font-size:16px; outline:none;
+  }
+  input:focus{border-color:var(--accent2)}
+  .income-row{display:flex; gap:8px}
+  .income-row span{align-self:center; background:var(--card2); border:1px solid var(--border); padding:12px; border-radius:10px; color:var(--muted)}
+  .stats{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:14px}
+  .stat{background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:12px}
+  .stat small{color:var(--muted); display:block; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em}
+  .stat strong{font-size:20px}
+  .stat.rem strong{color:var(--accent)}
+  .stat.over strong{color:var(--danger)}
+  .bar{height:12px; background:#0b1220; border:1px solid var(--border); border-radius:999px; overflow:hidden; margin-top:12px}
+  .bar > div{height:100%; width:0%; background:linear-gradient(90deg, var(--accent2), var(--accent)); transition:width .25s}
+  .bar.over > div{background:linear-gradient(90deg, var(--warn), var(--danger))}
+  .bar-lbl{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-top:8px}
+  .donut-wrap{display:flex; gap:16px; align-items:center; margin-top:14px; flex-wrap:wrap}
+  #donut{width:130px; height:130px; border-radius:50%; background:#0b1220; border:1px solid var(--border); flex-shrink:0; position:relative}
+  #donut::after{content:attr(data-label); position:absolute; inset:22px; background:var(--card); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; border:1px solid var(--border)}
+  .legend{font-size:13px; color:var(--muted); display:grid; gap:6px; flex:1; min-width:180px}
+  .legend div{display:flex; align-items:center; gap:8px}
+  .dot{width:12px; height:12px; border-radius:4px; display:inline-block}
+  .row{display:grid; grid-template-columns: 28px 1fr 130px 90px 36px; gap:10px; align-items:center;
+    padding:10px; border:1px solid transparent; border-radius:12px}
+  .row:hover{background:rgba(255,255,255,.04); border-color:var(--border)}
+  .row.header{color:var(--muted); font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.06em}
+  .row.header:hover{background:transparent; border-color:transparent}
+  .icon{width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px}
+  .name{font-weight:650}
+  .name small{display:block; color:var(--muted); font-weight:500}
+  input.amt{background:var(--card2); border:1px solid var(--border); color:var(--text); padding:9px 10px; border-radius:9px; width:100%; font-size:14.5px}
+  input[type=range]{width:100%; accent-color:var(--accent)}
+  .pct{font-size:13px; color:var(--muted); text-align:right; font-variant-numeric:tabular-nums}
+  .del{background:transparent; border:1px solid transparent; color:var(--muted); border-radius:8px; cursor:pointer; font-size:16px; padding:6px}
+  .del:hover{color:var(--danger); border-color:var(--border)}
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px}
+  button{cursor:pointer; border-radius:10px; border:1px solid var(--border); background:#0b1220; color:var(--text); padding:10px 12px; font-weight:700; font-size:13.5px}
+  button.primary{background:var(--accent); color:#052e16; border-color:transparent}
+  button.ghost{background:transparent}
+  button:disabled{opacity:.5; cursor:not-allowed}
+  button:hover:not(:disabled){filter:brightness(1.1)}
+  .add-form{display:grid; grid-template-columns:1fr 120px auto; gap:8px; margin-top:12px}
+  @media(max-width:600px){ .row{grid-template-columns:28px 1fr 110px 36px} .row .slider-cell{display:none} .stats{grid-template-columns:1fr 1fr} .add-form{grid-template-columns:1fr} }
+  #toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(20px); opacity:0; background:#020617;
+    border:1px solid var(--danger); color:#fecaca; padding:12px 16px; border-radius:12px; font-size:14px; font-weight:600;
+    transition:.25s; pointer-events:none; max-width:min(92vw,560px); text-align:center; z-index:50}
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  #toast.ok{border-color:var(--accent); color:#bbf7d0}
+  .alert{margin-top:12px; padding:11px 12px; border-radius:10px; font-size:13.5px; font-weight:600; display:none}
+  .alert.show{display:block}
+  .alert.over{background:rgba(239,68,68,.14); border:1px solid var(--danger); color:#fecaca}
+  .alert.good{background:rgba(34,197,94,.14); border:1px solid var(--accent); color:#bbf7d0}
+  .hint{font-size:13px; color:var(--muted); line-height:1.5}
+  .shake{animation:shake .3s}
+  @keyframes shake{25%{transform:translateX(-4px)}50%{transform:translateX(4px)}75%{transform:translateX(-3px)}}
+  footer{color:var(--muted); font-size:12.5px; text-align:center; margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>💰 Monthly Budget Planner</h1>
+      <p class="sub">Enter take-home pay, then split it across normal expenses. Totals can never exceed income — we clamp it automatically.</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="badge" id="statusBadge">Balanced ✓</div>
+      <button id="installBtn" style="display:none;background:var(--accent2);color:#082f49;border-color:transparent" title="Install app">📲 Install App</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2>1 · Income & Summary</h2>
+      <label class="lbl" for="income">Monthly take-home income</label>
+      <div class="income-row">
+        <span>$</span>
+        <input type="number" id="income" min="0" step="10" value="5000" />
+      </div>
+
+      <div class="stats">
+        <div class="stat"><small>Income</small><strong id="sIncome">$5,000</strong></div>
+        <div class="stat"><small>Allocated</small><strong id="sAlloc">$0</strong></div>
+        <div class="stat rem" id="remCard"><small>Remaining</small><strong id="sRem">$5,000</strong></div>
+      </div>
+
+      <div class="bar" id="bar"><div id="barFill"></div></div>
+      <div class="bar-lbl"><span id="barPct">0% allocated</span><span id="barMsg">You can allocate $5,000 more</span></div>
+
+      <div class="alert over" id="overAlert">⚠️ Over budget! Lower an expense or raise income. New increases are blocked until balanced.</div>
+      <div class="alert good" id="goodAlert">✅ Balanced — every dollar is assigned or left as remaining.</div>
+
+      <div class="donut-wrap">
+        <div id="donut" data-label="0%"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div class="toolbar">
+        <button class="primary" id="autofit">✨ Auto-fit to income</button>
+        <button id="resetBtn">↺ Reset defaults</button>
+        <button id="csvBtn" class="ghost">⬇ CSV</button>
+      </div>
+      <details id="installHelp" style="margin-top:12px;font-size:13px;color:var(--muted)">
+        <summary style="cursor:pointer;font-weight:700;color:var(--text)">📲 Add to Home Screen</summary>
+        <div style="margin-top:8px;line-height:1.6">
+          <b style="color:var(--text)">iPhone (Safari):</b> tap <b>Share ⬆</b> → <b>Add to Home Screen</b> → <b>Add</b>.<br/>
+          <b style="color:var(--text)">Android (Chrome):</b> tap <b>⋮ menu</b> → <b>Add to Home screen</b> / <b>Install app</b>, or use the <b>Install App</b> button above when it appears.<br/>
+          Once added it opens full-screen and works offline.
+        </div>
+      </details>
+      <p class="hint" style="margin-top:12px">Rule enforced: <b style="color:var(--text)">allocated ≤ income</b>. If you try to type or slide past the limit, that row is clamped and you'll see a warning. Lowering income below the total puts you over-budget until you fix it.</p>
+    </section>
+
+    <section class="card">
+      <h2>2 · Expenses — adjust freely within income</h2>
+      <div class="row header"><span></span><span>Category</span><span>Amount</span><span style="text-align:right">% of income</span><span></span></div>
+      <div id="rows"></div>
+
+      <div class="add-form">
+        <input type="text" id="newName" placeholder="New category e.g. Pets" maxlength="24" />
+        <input type="number" id="newAmt" placeholder="$0" min="0" step="10" />
+        <button id="addBtn">+ Add</button>
+      </div>
+      <div class="toolbar">
+        <button id="clearBtn" class="ghost">Clear all $0</button>
+      </div>
+    </section>
+  </div>
+  <footer>Stored locally in your browser · No account · Works offline</footer>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const DEFAULTS = [
+  {name:'Housing',        icon:'🏠', color:'#38bdf8', amt:1500},
+  {name:'Utilities',      icon:'💡', color:'#a78bfa', amt:250},
+  {name:'Groceries',      icon:'🛒', color:'#22c55e', amt:500},
+  {name:'Transportation', icon:'🚗', color:'#f59e0b', amt:400},
+  {name:'Insurance',      icon:'🛡️', color:'#f472b6', amt:250},
+  {name:'Healthcare',     icon:'🏥', color:'#ef4444', amt:200},
+  {name:'Debt payments',  icon:'💳', color:'#fb7185', amt:300},
+  {name:'Savings',        icon:'🐷', color:'#4ade80', amt:500},
+  {name:'Dining out',     icon:'🍔', color:'#fdba74', amt:250},
+  {name:'Entertainment',  icon:'🎬', color:'#c084fc', amt:200},
+  {name:'Personal',       icon:'👕', color:'#94a3b8', amt:150},
+  {name:'Misc',           icon:'📦', color:'#64748b', amt:100},
+];
+const LS_KEY='budget-app-v1';
+let state = { income:5000, items: structuredClone(DEFAULTS) };
+
+function load(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    const p=JSON.parse(raw);
+    if(typeof p.income==='number' && Array.isArray(p.items)) state=p;
+  }catch{}
+}
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+const $=id=>document.getElementById(id);
+const fmt=n=>'$'+Math.round(n).toLocaleString('en-US');
+let toastT;
+function toast(msg, ok=false){
+  const t=$('toast'); t.textContent=msg; t.className=ok?'show ok':'show';
+  clearTimeout(toastT); toastT=setTimeout(()=>t.className='',2600);
+}
+function totals(){ const a=state.items.reduce((s,i)=>s+(+i.amt||0),0); return {alloc:a, rem:state.income-a}; }
+function maxFor(index){
+  const t=totals();
+  return Math.max(0, state.income - (t.alloc - state.items[index].amt));
+}
+
+function render(){
+  const {alloc, rem}=$('income') && totals() || totals();
+  $('income').value=state.income;
+  $('sIncome').textContent=fmt(state.income);
+  $('sAlloc').textContent=fmt(alloc);
+  $('sRem').textContent=fmt(Math.max(0,rem))+(rem<0?` (${fmt(rem)} over)`:'');
+  $('remCard').className='stat '+(rem<0?'over':'rem');
+  const pct=state.income>0?Math.min(100,alloc/state.income*100):0;
+  $('barFill').style.width=pct+'%';
+  $('bar').className='bar '+(rem<0?'over':'');
+  $('barPct').textContent=Math.round(state.income?alloc/state.income*100:0)+'% allocated';
+  $('barMsg').textContent=rem>=0?`You can allocate ${fmt(rem)} more`:`Over by ${fmt(-rem)} — reduce expenses`;
+  $('statusBadge').textContent=rem<0?'Over budget ✕':(rem===0?'Fully allocated ✓':'Balanced ✓');
+  $('statusBadge').style.background=rem<0?'var(--danger)':(rem===0?'var(--accent2)':'var(--accent)');
+  $('overAlert').className='alert over'+(rem<0?' show':'');
+  $('goodAlert').className='alert good'+(rem>=0?' show':'');
+
+  // donut
+  const donut=$('donut');
+  if(alloc<=0){ donut.style.background='#0b1220'; donut.dataset.label='0%'; }
+  else{
+    let acc=0, parts=[];
+    state.items.forEach(it=>{
+      if(it.amt<=0) return;
+      const s=acc/alloc*360, e=(acc+it.amt)/alloc*360; acc+=it.amt;
+      parts.push(`${it.color} ${s}deg ${e}deg`);
+    });
+    donut.style.background=`conic-gradient(${parts.join(',')})`;
+    donut.dataset.label=Math.round(pct)+'%';
+  }
+  const sorted=[...state.items].sort((a,b)=>b.amt-a.amt).slice(0,6);
+  $('legend').innerHTML=sorted.map(i=>`<div><span class="dot" style="background:${i.color}"></span>${escapeHtml(i.name)} — <b style="color:var(--text)">${fmt(i.amt)}</b></div>`).join('') || '<div>No expenses yet</div>';
+
+  // rows
+  const wrap=$('rows'); wrap.innerHTML='';
+  state.items.forEach((it,idx)=>{
+    const row=document.createElement('div'); row.className='row'; row.dataset.idx=idx;
+    const p=state.income>0?it.amt/state.income*100:0;
+    row.innerHTML=`
+      <div class="icon" style="background:${it.color}22">${it.icon}</div>
+      <div class="name">${escapeHtml(it.name)}<small>${fmt(it.amt)} / mo</small></div>
+      <div class="slider-cell"><input type="range" min="0" max="${Math.max(state.income, it.amt)}" step="10" value="${it.amt}" aria-label="${escapeHtml(it.name)} slider"></div>
+      <div><input class="amt" type="number" min="0" step="10" value="${it.amt}" aria-label="${escapeHtml(it.name)} amount"></div>
+      <div style="display:flex;gap:2px;align-items:center"><span class="pct" style="flex:1">${p.toFixed(1)}%</span><button class="del" title="Remove">×</button></div>`;
+    const slider=row.querySelector('input[type=range]');
+    const amt=row.querySelector('.amt');
+    slider.addEventListener('input',()=>setAmount(idx, +slider.value, amt, row));
+    amt.addEventListener('change',()=>setAmount(idx, +amt.value||0, amt, row));
+    amt.addEventListener('input',()=>{ /* live clamp feedback without full rerender */ });
+    row.querySelector('.del').addEventListener('click',()=>{
+      state.items.splice(idx,1); save(); render(); toast(`Removed "${it.name}"`, true);
+    });
+    wrap.appendChild(row);
+  });
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function setAmount(idx, val, inputEl, rowEl){
+  val=Math.max(0, Math.round(+val||0));
+  const allowed=maxFor(idx);
+  const {rem}=totals();
+  // If already over budget (income lowered), only allow decreases
+  if(rem<0 && val>state.items[idx].amt){
+    toast(`Over budget — lower expenses first. Max for "${state.items[idx].name}" is ${fmt(state.items[idx].amt)}.`);
+    shake(rowEl); render(); return;
+  }
+  if(val>allowed){
+    state.items[idx].amt=allowed;
+    save(); render();
+    toast(`Capped "${state.items[idx].name}" at ${fmt(allowed)} to stay within ${fmt(state.income)} income.`);
+    const r=document.querySelector(`.row[data-idx="${idx}"]`); if(r) shake(r);
+    return;
+  }
+  state.items[idx].amt=val; save(); render();
+  // keep focus on edited input
+  if(inputEl && document.activeElement!==$('income')){
+    const r=document.querySelector(`.row[data-idx="${idx}"] .amt`);
+    if(r && inputEl.classList.contains('amt')){ r.focus(); r.setSelectionRange(r.value.length,r.value.length); }
+  }
+}
+function shake(el){ if(!el) return; el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+
+$('income').addEventListener('change', e=>{
+  let v=Math.max(0, Math.round(+e.target.value||0));
+  state.income=v; save(); render();
+  const {rem}=totals();
+  if(rem<0) toast(`Income set to ${fmt(v)} — you're ${fmt(-rem)} over budget. Reduce expenses or hit Auto-fit.`);
+  else toast(`Income set to ${fmt(v)}. You have ${fmt(rem)} left to allocate.`, true);
+});
+$('autofit').addEventListener('click', ()=>{
+  const {alloc}=totals();
+  if(alloc<=0){ toast('Nothing to scale — add expenses first.'); return; }
+  if(alloc<=state.income){ toast('Already within income — no scaling needed.', true); return; }
+  const f=state.income/alloc;
+  state.items.forEach(i=>i.amt=Math.floor(i.amt*f));
+  // fix rounding remainder
+  let t2=state.items.reduce((s,i)=>s+i.amt,0);
+  let left=state.income-t2, k=0;
+  while(left>0 && k<1000){ state.items[k%state.items.length].amt+=1; left--; k++; }
+  save(); render(); toast('Scaled all expenses proportionally to fit income.', true);
+});
+$('resetBtn').addEventListener('click', ()=>{
+  state.items=structuredClone(DEFAULTS); save(); render(); toast('Reset to default expenses.', true);
+});
+$('clearBtn').addEventListener('click', ()=>{
+  state.items.forEach(i=>i.amt=0); save(); render(); toast('Cleared all amounts to $0.', true);
+});
+$('addBtn').addEventListener('click', ()=>{
+  const name=$('newName').value.trim()||'New expense';
+  let amt=Math.max(0, Math.round(+$('newAmt').value||0));
+  const room=state.income-totals().alloc;
+  const palette=['#38bdf8','#22c55e','#f59e0b','#a78bfa','#f472b6','#4ade80','#fdba74','#c084fc'];
+  if(amt>room){
+    toast(`Only ${fmt(Math.max(0,room))} fits in income — added "${name}" capped at that.`);
+    amt=Math.max(0,room);
+  } else toast(`Added "${name}" — ${fmt(amt)}.`, true);
+  state.items.push({name, icon:'🧾', color:palette[state.items.length%palette.length], amt});
+  $('newName').value=''; $('newAmt').value=''; save(); render();
+});
+$('csvBtn').addEventListener('click', ()=>{
+  const {alloc, rem}=totals();
+  let csv='Category,Amount,Percent of Income\n'+state.items.map(i=>`"${i.name.replace(/"/g,'""')}",${i.amt},${state.income?(i.amt/state.income*100).toFixed(1)+'%':'0%'}`).join('\n')+`\nIncome,${state.income},\nAllocated,${alloc},\nRemaining,${rem},\n`;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='budget.csv'; a.click(); URL.revokeObjectURL(a.href);
+});
+
+load(); render();
+</script>
+<script>
+// PWA: service worker + install prompt (Home Screen app)
+(function(){
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    });
+  }
+  let deferred = null;
+  const btn = document.getElementById('installBtn');
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferred = e;
+    if (btn) btn.style.display = '';
+  });
+  if (btn) btn.addEventListener('click', async () => {
+    if (!deferred) {
+      const help = document.getElementById('installHelp');
+      if (help) help.open = true;
+      toast('Use Share → Add to Home Screen (iPhone) or ⋮ menu → Install (Android).');
+      return;
+    }
+    deferred.prompt();
+    try { await deferred.userChoice; } catch {}
+    deferred = null;
+    btn.style.display = 'none';
+  });
+  window.addEventListener('appinstalled', () => {
+    if (btn) btn.style.display = 'none';
+    toast('App installed — launch it from your Home Screen.', true);
+  });
+})();
+</script>
+</body>
+</html>
