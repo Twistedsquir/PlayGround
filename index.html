@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#1d4ed8" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Mileage &amp; Gas Tracker</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>" />
+<meta name="description" content="Track trip miles and gas costs, then export to Excel-compatible files." />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="app-header">
+  <div class="header-inner">
+    <div class="brand">
+      <span class="brand-icon" aria-hidden="true">🚗</span>
+      <div>
+        <h1>Mileage &amp; Gas Tracker</h1>
+        <p class="subtitle">Log trips, track fuel spend, export to Excel</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <label class="unit-toggle" title="Distance unit">
+        <span>Unit</span>
+        <select id="unitSelect" aria-label="Distance unit">
+          <option value="mi">miles</option>
+          <option value="km">km</option>
+        </select>
+      </label>
+      <button id="exportCsvBtn" class="btn primary hide-sm" type="button">⬇ Export Excel (CSV)</button>
+      <button id="exportXlsBtn" class="btn hide-sm" type="button">⬇ Export .xls</button>
+    </div>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- Stats -->
+  <section class="stats" id="stats" aria-label="Summary">
+    <div class="stat-card"><span class="stat-label">Total distance</span><strong id="statMiles">0 mi</strong><span class="stat-sub" id="statTrips">0 trips</span></div>
+    <div class="stat-card"><span class="stat-label">Total fuel cost</span><strong id="statCost">$0.00</strong><span class="stat-sub" id="statFuel">0 gal</span></div>
+    <div class="stat-card"><span class="stat-label">Avg. economy</span><strong id="statMpg">—</strong><span class="stat-sub">miles / gallon</span></div>
+    <div class="stat-card"><span class="stat-label">Cost per mile</span><strong id="statCpm">—</strong><span class="stat-sub" id="statPrice">avg — / gal</span></div>
+  </section>
+
+  <section class="chart-card">
+    <div class="card-head">
+      <h2>Monthly cost</h2>
+      <span class="hint">Last 6 months · updates automatically</span>
+    </div>
+    <canvas id="monthChart" height="120" aria-label="Monthly fuel cost chart"></canvas>
+  </section>
+
+  <div class="columns">
+    <!-- Form -->
+    <section class="card form-card" id="add" aria-label="Add a trip">
+      <h2 id="formTitle">Add a trip</h2>
+      <form id="tripForm" novalidate>
+        <div class="grid-2">
+          <label>Date
+            <input type="date" id="fDate" required />
+          </label>
+          <label>Purpose
+            <select id="fPurpose">
+              <option>Business</option>
+              <option>Personal</option>
+              <option>Commute</option>
+              <option>Delivery</option>
+              <option>Other</option>
+            </select>
+          </label>
+        </div>
+        <div class="grid-2">
+          <label>From<input type="text" id="fFrom" placeholder="e.g. Austin" autocomplete="off" /></label>
+          <label>To<input type="text" id="fTo" placeholder="e.g. Dallas" autocomplete="off" /></label>
+        </div>
+        <label>Trip name <small>(auto-filled from From → To)</small>
+          <input type="text" id="fTitle" placeholder="e.g. Austin → Dallas" autocomplete="off" />
+        </label>
+        <div class="grid-3">
+          <label><span class="dist-label">Distance (<span class="unitLabel">mi</span>)</span><input type="number" id="fMiles" min="0" step="0.1" placeholder="120" required /></label>
+          <label>Gallons<input type="number" id="fGallons" min="0" step="0.001" placeholder="4.5" /></label>
+          <label>Price / gal ($)<input type="number" id="fPrice" min="0" step="0.01" placeholder="3.49" /></label>
+        </div>
+        <div class="calc-row">
+          <label class="check"><input type="checkbox" id="fRoundTrip" /> Round trip (×2 distance)</label>
+          <div class="live-calc" id="liveCalc">Fill in distance + fuel to preview cost &amp; MPG…</div>
+        </div>
+        <label>Notes (optional)<input type="text" id="fNotes" placeholder="Toll, client, etc." autocomplete="off" /></label>
+        <p class="form-error" id="formError" role="alert" hidden></p>
+        <div class="form-actions">
+          <button type="submit" class="btn primary" id="submitBtn">Add trip</button>
+          <button type="button" class="btn ghost" id="resetBtn">Clear</button>
+          <button type="button" class="btn ghost" id="cancelEditBtn" hidden>Cancel edit</button>
+        </div>
+        <p class="tip">💡 Enter <b>gallons + price</b> and cost is calculated. Or enter just <b>distance + total paid</b> below via gallons ≈ cost ÷ price. Missing MPG is derived automatically.</p>
+        <div class="grid-2">
+          <label>Total paid ($) <small>alternative</small><input type="number" id="fTotal" min="0" step="0.01" placeholder="15.70" /></label>
+          <label>Odometer (optional)<input type="number" id="fOdo" min="0" step="1" placeholder="45210" /></label>
+        </div>
+      </form>
+      <details class="defaults">
+        <summary>⚙ Default gas price &amp; vehicle MPG</summary>
+        <div class="grid-2">
+          <label>Default price / gal ($)<input type="number" id="dPrice" min="0" step="0.01" /></label>
+          <label>My vehicle MPG<input type="number" id="dMpg" min="0" step="0.1" /></label>
+        </div>
+        <p class="hint">Used to pre-fill the form and estimate gallons when you only enter distance.</p>
+      </details>
+    </section>
+
+    <!-- Table -->
+    <section class="card table-card" id="log" aria-label="Trip log">
+      <div class="card-head wrap">
+        <h2>Trip log</h2>
+        <div class="table-tools">
+          <input type="search" id="search" placeholder="Search trips…" aria-label="Search trips" />
+          <select id="filterPurpose" aria-label="Filter by purpose">
+            <option value="">All purposes</option>
+            <option>Business</option>
+            <option>Personal</option>
+            <option>Commute</option>
+            <option>Delivery</option>
+            <option>Other</option>
+          </select>
+          <select id="sortBy" aria-label="Sort trips">
+            <option value="date-desc">Newest first</option>
+            <option value="date-asc">Oldest first</option>
+            <option value="miles-desc">Most miles</option>
+            <option value="cost-desc">Highest cost</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table id="tripTable">
+          <thead>
+            <tr>
+              <th>Trip</th>
+              <th class="num">Distance</th><th class="num">Gallons</th>
+              <th class="num">$/gal</th><th class="num">Cost</th><th class="num">MPG</th><th><span class="sr">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody id="tripBody"></tbody>
+        </table>
+        <div id="emptyState" class="empty">
+          <p><strong>No trips yet.</strong></p>
+          <p>Add your first trip with the form, or load <button type="button" class="link" id="loadSample">sample data</button>.</p>
+        </div>
+      </div>
+      <div class="card-foot wrap">
+        <span class="hint" id="rowCount"></span>
+        <div class="foot-btns">
+          <label class="btn small import-label">📥 Import CSV<input type="file" id="importFile" accept=".csv,text/csv" hidden /></label>
+          <button class="btn small" id="exportJsonBtn" type="button">Backup (JSON)</button>
+          <button class="btn small danger" id="clearAllBtn" type="button">Delete all</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card export-card" id="export">
+    <h2>Export to Excel</h2>
+    <div class="export-btns">
+      <button id="exportCsvBtn2" class="btn primary" type="button">⬇ Excel (CSV)</button>
+      <button id="exportXlsBtn2" class="btn" type="button">⬇ Excel (.xls)</button>
+    </div>
+    <ol>
+      <li>Click <b>Export Excel (CSV)</b> — downloads <code>trips.csv</code>.</li>
+      <li>Open it in <b>Microsoft Excel / Google Sheets / Numbers</b> — columns line up automatically.</li>
+      <li>Prefer a native sheet? Use <b>Export .xls</b> instead (opens directly in Excel).</li>
+    </ol>
+  </section>
+</main>
+
+<footer class="footer">Data is stored privately in your browser (localStorage). No account, no server.</footer>
+
+<nav class="mobile-bar" aria-label="Quick actions">
+  <a class="mbtn" href="#add">➕<span>Add</span></a>
+  <a class="mbtn" href="#log">📋<span>Trips</span></a>
+  <a class="mbtn" href="#stats">📊<span>Stats</span></a>
+  <button class="mbtn mbtn-export" id="mExportBtn" type="button">⬇<span>Export</span></button>
+</nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
