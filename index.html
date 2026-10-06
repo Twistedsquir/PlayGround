@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>TouchTether — Placeable Touch Controls for Any App</title>
+<meta name="theme-color" content="#0b1020" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="TouchTether" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">🎮</span>
+    <div>
+      <h1>TouchTether</h1>
+      <p>Tether to any open app &amp; place mobile controls where you want</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button id="btnTether" class="btn primary">🖥️ Tether App…</button>
+    <button id="btnStopTether" class="btn ghost hidden">⏹ Untether</button>
+    <div class="mode-toggle" role="tablist" aria-label="Mode">
+      <button id="modePlay" class="btn toggle active">▶ Play</button>
+      <button id="modeEdit" class="btn toggle">✏️ Edit layout</button>
+    </div>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="stage-col">
+    <div class="stage-toolbar">
+      <div class="add-palette">
+        <span class="palette-label">Add:</span>
+        <button class="btn small" data-add="joystick">🕹️ Joystick</button>
+        <button class="btn small" data-add="button">🔘 Button</button>
+        <button class="btn small" data-add="dpad">✛ D-Pad</button>
+      </div>
+      <div class="stage-tools">
+        <label class="switch"><input type="checkbox" id="chkDemoGame" checked /> Demo game</label>
+        <label class="switch"><input type="checkbox" id="chkGrid" checked /> Grid</label>
+        <button id="btnClear" class="btn small ghost">Clear</button>
+      </div>
+    </div>
+
+    <div id="stage" class="stage grid">
+      <canvas id="demoGame" width="960" height="540"></canvas>
+      <video id="tetherVideo" class="hidden" autoplay muted playsinline></video>
+      <img id="tetherPhoto" class="hidden" alt="Tethered app screenshot" />
+      <iframe id="tetherFrame" class="hidden" title="Tethered web app" allow="gamepad; fullscreen; autoplay"></iframe>
+      <div id="tetherPlaceholder" class="placeholder">
+        <div class="ph-card">
+          <div class="ph-icon">🖥️ + 📱</div>
+          <h2>No app tethered yet</h2>
+          <p>Click <b>Tether App…</b> and pick any open window / tab / game.<br/>It streams live behind your touch controls.</p>
+          <p class="hint">Desktop uses the Screen Capture picker. On <b>iPhone/iPad</b> use <b>Camera</b> (point at the game screen), <b>Photo</b> (screenshot), or <b>Web URL</b> (embed a playable web game).<br/>The demo game below is live so you can test controls right now.</p>
+        </div>
+      </div>
+      <div id="controlLayer"></div>
+      <div id="editHint" class="edit-hint hidden">✏️ EDIT MODE — drag controls anywhere • drag corner dot to resize • click to configure →</div>
+      <div id="tetherBadge" class="tether-badge hidden">🔗 <span id="tetherName">App</span></div>
+    </div>
+
+    <div class="under-stage">
+      <div class="keys-monitor">
+        <span class="mono-label">LIVE KEYS:</span>
+        <div id="keysLive" class="keys-live"><span class="dim">— press a control or keyboard —</span></div>
+      </div>
+      <div class="layout-io">
+        <button id="btnSave" class="btn small">💾 Save</button>
+        <button id="btnLoad" class="btn small ghost">↺ Defaults</button>
+        <button id="btnExport" class="btn small ghost">⬇ Export</button>
+        <button id="btnImport" class="btn small ghost">⬆ Import</button>
+        <input type="file" id="fileImport" accept="application/json" class="hidden" />
+      </div>
+    </div>
+  </section>
+
+  <aside class="side">
+    <section class="card">
+      <h3>1 · Tether target</h3>
+      <p class="muted">Pick the open app / game you want controls to sit on top of.</p>
+      <div id="iosNotice" class="ios-notice hidden">📱 <b>iOS detected:</b> iPhone Safari blocks window capture, so <b>Screen</b> is unavailable. Use <b>Camera</b> (point at the game), <b>Photo</b> (screenshot), or <b>Web URL</b> (playable + controllable) instead. Tip: Share → Add to Home Screen for fullscreen.</div>
+      <div class="tether-modes">
+        <button class="btn small tmode" data-tether="screen">🖥️ Screen</button>
+        <button class="btn small tmode" data-tether="camera">📷 Camera</button>
+        <button class="btn small tmode" data-tether="photo">🖼️ Photo</button>
+        <button class="btn small tmode" data-tether="web">🌐 Web URL</button>
+        <button class="btn small tmode" data-tether="demo">🎮 Demo</button>
+      </div>
+      <div id="webRow" class="row hidden">
+        <input id="webUrl" placeholder="https://… web game URL" inputmode="url" style="flex:1" />
+        <button id="btnWebGo" class="btn small primary">Load</button>
+      </div>
+      <div class="row">
+        <button id="btnTether2" class="btn primary small">🖥️ Select app window…</button>
+      </div>
+      <div id="tetherStatus" class="status">Status: <b>untethered</b> — demo-game background active.</div>
+      <label class="switch"><input type="checkbox" id="chkVideoBg" checked /> Show tethered layer behind controls</label>
+      <label class="switch"><input type="range" id="rngOpacity" min="20" max="100" value="100" /> Layer opacity <span id="opacityVal">100%</span></label>
+      <input type="file" id="filePhoto" accept="image/*" class="hidden" />
+    </section>
+
+    <section class="card">
+      <h3>2 · Selected control</h3>
+      <div id="noSel" class="muted">Nothing selected. In <b>Edit layout</b> mode, click a control — or add one from the palette.</div>
+      <div id="cfgPanel" class="hidden">
+        <div class="row"><label>Type</label><span id="cfgType" class="pill">joystick</span></div>
+        <div class="row"><label>Label</label><input id="cfgLabel" maxlength="8" /></div>
+        <div class="row"><label>Key mapping</label></div>
+        <div id="cfgKeys" class="key-grid"></div>
+        <div class="row"><label>Color</label><input type="color" id="cfgColor" value="#22d3ee" /></div>
+        <div class="row"><label>Size</label><input type="range" id="cfgSize" min="56" max="220" value="120" /><span id="cfgSizeVal">120px</span></div>
+        <div class="row btn-row">
+          <button id="btnDup" class="btn small">⧉ Duplicate</button>
+          <button id="btnDel" class="btn small danger">🗑 Delete</button>
+        </div>
+        <p class="muted tiny">Joystick maps to 4 keys (Up/Down/Left/Right). Buttons &amp; D-Pad faces map to 1 key each. Keys are fired as real <code>keydown/keyup</code> events so any focused web game responds, and the built-in demo reads them too.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>3 · How it functions in-game</h3>
+      <ol class="how">
+        <li><b>Tether</b> puts the app video behind the control layer.</li>
+        <li><b>Edit</b> to drag controls exactly where your thumbs want them.</li>
+        <li><b>Play</b> — touches become <code>keydown</code> presses (<span id="mapSummary" class="mono">WASD + Space…</span>).</li>
+      </ol>
+      <div class="row">
+        <button id="btnTestKeys" class="btn small ghost">⌨ Focus test-box &amp; type</button>
+      </div>
+      <input id="testBox" class="testbox" placeholder="click here, then press overlay controls — keys land here" />
+      <details>
+        <summary>Native PC games (Steam etc.)?</summary>
+        <p class="muted tiny">Browsers can't inject keys into other desktop programs directly. Two proven bridges:<br/>
+        ① Keep the game in a browser tab and tether that tab.<br/>
+        ② Map the keys shown above in <b>JoyToKey / AntiMicroX / Steam Input</b> to your controller, or forward via the WebSocket snippet in <code>app.js</code> (<code>InputBridge.broadcast</code>).</p>
+      </details>
+      <details>
+        <summary>iPhone / iPad (iOS apps)?</summary>
+        <p class="muted tiny">iOS Safari blocks capturing other apps' windows, and web pages can't overlay native apps — so:<br/>
+        ① <b>Web URL</b> mode is the fully playable option: the web game runs inside the stage and overlay controls send it keys.<br/>
+        ② <b>Camera</b> mode: point the camera at your console/PC screen — great for laying out controls and for companion-style play.<br/>
+        ③ For native iOS games, mirror the iPhone to a Mac/PC (e.g. via AirPlay/QuickTime), open this page on that computer, and tether that mirrored window.</p>
+      </details>
+    </section>
+
+    <section class="card">
+      <h3>Input log</h3>
+      <div id="log" class="log"></div>
+      <button id="btnClearLog" class="btn small ghost">Clear log</button>
+    </section>
+  </aside>
+</main>
+
+<footer class="foot">
+  <span>TouchTether · multi-touch (Pointer Events) · layouts autosave to localStorage · works offline</span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
