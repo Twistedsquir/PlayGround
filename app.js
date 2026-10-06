@@ -18,6 +18,8 @@ const CATS = [
   {id:'transport', name:'Transport',         icon:'⛽', color:'#f97316'},
   {id:'fun',       name:'Entertainment',     icon:'🎬', color:'#6366f1'},
   {id:'utilities', name:'Utilities & Bills', icon:'💡', color:'#64748b'},
+  {id:'debts',     name:'Debts',             icon:'💳', color:'#dc2626'},
+  {id:'tithe',     name:'Tithe',             icon:'🙏', color:'#92400e'},
   {id:'other',     name:'Other',             icon:'📦', color:'#9ca3af'},
 ];
 const catById = id => CATS.find(c=>c.id===id) || CATS[CATS.length-1];
@@ -32,7 +34,9 @@ const RULES = [
   [/pharmacy|prescription|vitamin|aspirin|ibuprofen|tylenol|bandage|shampoo|soap|lotion|sunscreen|toothpaste|toothbrush|deodorant|razor|makeup|cosmetic|contact|lens solution|first aid|cvs|walgreen|rite aid/i,'health'],
   [/gas|fuel|shell|chevron|exxon|uber|lyft|taxi|bus|train|metro|subway|airline|flight|parking|toll|car wash|oil change|tire|auto|mechanic|transit/i,'transport'],
   [/movie|cinema|theater|concert|ticket|netflix|spotify|hulu|disney|game|toy|book|lego|sport|gym|golf|bowling|arcade|museum|zoo|amusement|entertain/i,'fun'],
-  [/electric|water bill|gas bill|internet|phone bill|rent|mortgage|council|insurance|utility|comcast|verizon|at&t|t-mobile|power|sewer|trash/i,'utilities'],
+  [/electric|water bill|gas bill|internet|phone bill|rent|council|insurance|utility|comcast|verizon|at&t|t-mobile|power|sewer|trash/i,'utilities'],
+  [/mortgage|credit card payment|card payment|student loan|car loan|personal loan|loan payment|debt|interest charge|late fee|affirm|afterpay|klarna|collections/i,'debts'],
+  [/tithe|tithing|offering|donation|charity|church|ministry|mission|nonprofit|tzedakah|zakat/i,'tithe'],
 ];
 function autoCategory(name){
   const t = ' ' + String(name||'').toLowerCase() + ' ';
@@ -45,7 +49,7 @@ const LS_KEY = 'receiptsplit.v1';
 function defaultState(){
   return {
     income: 4200,
-    budgets: {groceries:700, dining:200, household:150, electronics:120, clothing:120, health:100, transport:250, fun:150, utilities:320, other:100},
+    budgets: {groceries:700, dining:200, household:150, electronics:120, clothing:120, health:100, transport:250, fun:150, utilities:320, debts:400, tithe:420, other:100},
     receipts: [], // {id, store, date, month, total, image?, updatedTs, items:[{name,price,cat}]}
     viewMonth: monthISO(),
     deviceId: null,
@@ -64,6 +68,10 @@ function load(){
       out.clocks.income = out.clocks.income || {ts:0,pid:''};
       out.clocks.budgets = out.clocks.budgets || {};
       out.clocks.reset = out.clocks.reset || {ts:0,pid:''};
+      // backfill budget defaults for categories added after the save was created
+      out.budgets = out.budgets || {};
+      const freshBudgets = defaultState().budgets;
+      Object.keys(freshBudgets).forEach(k=>{ if(out.budgets[k] == null) out.budgets[k] = freshBudgets[k]; });
       if(!out.deviceId) out.deviceId = uid() + uid();
       return out;
     }
@@ -509,10 +517,10 @@ function bind(){
   $('#monthInput').addEventListener('change', e=>{ state.viewMonth=e.target.value||monthISO(); save(); renderBudget(); });
   $('#suggestBtn').addEventListener('click', ()=>{
     const I=+state.income||0;
-    const sug={groceries:r(I*.22),dining:r(I*.08),household:r(I*.05),electronics:r(I*.04),clothing:r(I*.05),health:r(I*.05),transport:r(I*.12),fun:r(I*.07),utilities:r(I*.15),other:r(I*.04)};
+    const sug={groceries:r(I*.18),dining:r(I*.06),household:r(I*.04),electronics:r(I*.03),clothing:r(I*.04),health:r(I*.04),transport:r(I*.10),fun:r(I*.05),utilities:r(I*.12),debts:r(I*.10),tithe:r(I*.10),other:r(I*.02)};
     function r(x){return Math.round(x);}
     Object.entries(sug).forEach(([cat,value])=>RS.localOp({t:'budget-set', cat, value}));
-    save(); renderBudget(); toast('Suggested split applied (adds to ~87%, rest = savings).');
+    save(); renderBudget(); toast('Suggested split applied (adds to ~88%, rest = savings).');
   });
   $('#zeroBtn').addEventListener('click', ()=>{ CATS.forEach(c=>RS.localOp({t:'budget-set', cat:c.id, value:0})); save(); renderBudget(); });
   $('#histFilter').addEventListener('change', renderHistory);
@@ -657,7 +665,7 @@ async function runOCR(){
 /* rule chips */
 function renderChips(){
   const box=$('#ruleChips');
-  const examples=[['🥑 milk, eggs, bananas','groceries'],['🍔 starbucks, sushi','dining'],['🔧 drill, paint, detergent','household'],['🔌 usb, headphones, tv','electronics'],['👕 shirt, shoes','clothing'],['💊 pharmacy, shampoo','health'],['⛽ gas, uber, parking','transport'],['🎬 movie, gym, books','fun']];
+  const examples=[['🥑 milk, eggs, bananas','groceries'],['🍔 starbucks, sushi','dining'],['🔧 drill, paint, detergent','household'],['🔌 usb, headphones, tv','electronics'],['👕 shirt, shoes','clothing'],['💊 pharmacy, shampoo','health'],['⛽ gas, uber, parking','transport'],['🎬 movie, gym, books','fun'],['💳 loan, credit card, mortgage','debts'],['🙏 tithe, offering, donation','tithe']];
   box.innerHTML=examples.map(e=>'<span>'+e[0]+'</span>').join('');
 }
 

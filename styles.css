@@ -3,7 +3,7 @@
   --line:#e7e9f4; --brand:#4f46e5; --brand2:#7c3aed; --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
   --chip:#eef0ff; --radius:18px; --shadow:0 12px 32px rgba(20,26,51,.12);
   --groc:#16a34a; --dine:#f59e0b; --hard:#0ea5e9; --elec:#8b5cf6; --cloth:#ec4899;
-  --health:#14b8a6; --trans:#f97316; --fun:#6366f1; --util:#64748b; --other:#9ca3af;
+  --health:#14b8a6; --trans:#f97316; --fun:#6366f1; --util:#64748b; --debts:#dc2626; --tithe:#92400e; --other:#9ca3af;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
