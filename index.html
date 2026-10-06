@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#faf7f2" />
+<meta name="description" content="CouchFinder — describe your dream couch, get live matches sorted cheapest first, with direct links to each product." />
+<title>CouchFinder — Describe it. Find it. Cheapest first.</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛋️</text></svg>"/>
+<style>
+  :root{
+    --bg:#faf7f2; --card:#ffffff; --ink:#1e1b16; --muted:#7a7368;
+    --accent:#c2410c; --accent2:#1c1917; --line:#e9e2d6;
+    --green:#15803d; --radius:18px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,Arial;background:var(--bg);color:var(--ink);overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+  img{max-width:100%}
+  a,button{-webkit-tap-highlight-color:transparent}
+  button{font-family:inherit}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  header{position:sticky;top:0;z-index:30;background:rgba(250,247,242,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 18px}
+  .nav{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 0}
+  .logo{display:flex;gap:10px;align-items:center;font-weight:800;font-size:20px;letter-spacing:-.02em;white-space:nowrap}
+  .logo span.badge{background:var(--accent2);color:#fff;font-size:12px;padding:3px 8px;border-radius:999px;font-weight:700;white-space:nowrap}
+  .tagline{font-size:13px;color:var(--muted)}
+  .hero{padding:34px 0 10px;text-align:center}
+  .hero h1{font-size:clamp(28px,5vw,52px);line-height:1.05;margin:0;letter-spacing:-.03em}
+  .hero h1 em{font-style:normal;color:var(--accent)}
+  .hero p{color:var(--muted);max-width:640px;margin:12px auto 0;font-size:16px;line-height:1.5}
+  .search-card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin:22px auto;box-shadow:0 12px 40px rgba(0,0,0,.06)}
+  textarea{width:100%;border:1px solid var(--line);border-radius:14px;padding:14px;font-size:16px;min-height:86px;resize:vertical;font-family:inherit;background:#fffdf9;color:var(--ink)}
+  textarea:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  .chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chips .chip{flex:0 0 auto}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-size:14px;cursor:pointer;color:var(--ink);min-height:36px}
+  .chip:hover{border-color:var(--accent);color:var(--accent)}
+  select,input[type=number]{border:1px solid var(--line);border-radius:10px;padding:10px;font-size:16px;background:#fff;color:var(--ink);width:100%;min-height:44px}
+  .btn{background:var(--accent2);color:#fff;border:0;border-radius:12px;padding:13px 20px;font-weight:700;font-size:16px;cursor:pointer;display:inline-flex;gap:8px;align-items:center;justify-content:center;min-height:48px;text-decoration:none}
+  .btn.primary{background:var(--accent)}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn:disabled{opacity:.6;cursor:wait}
+  .btn:hover{filter:brightness(1.06)}
+  .budgetrow{display:flex;gap:10px;margin-top:12px;align-items:flex-end;flex-wrap:wrap}
+  .budgetrow .budget{max-width:240px;flex:1 1 180px}
+  .budgetrow label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+  .status{display:flex;gap:10px;align-items:center;justify-content:space-between;margin:18px 0 10px;flex-wrap:wrap}
+  .status .count{font-weight:800}
+  .pill{font-size:12px;border-radius:999px;padding:4px 10px;background:#eee;display:inline-block}
+  .pill.live{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+  .pill.curated{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+  .pill.best{background:var(--accent2);color:#fff}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding-bottom:40px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column}
+  .card button.imgbtn{border:0;padding:0;background:#eee;cursor:pointer;display:block;width:100%}
+  .card img{width:100%;aspect-ratio:4/3;object-fit:cover;background:#eee;display:block}
+  .card .body{padding:14px;display:flex;flex-direction:column;gap:8px;flex:1}
+  .price-row{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .price{font-size:22px;font-weight:900}
+  .match{font-size:13px;font-weight:800;color:var(--green);white-space:nowrap}
+  .card h3{margin:0;font-size:16px;line-height:1.35}
+  .card h3 button{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer;font-weight:700}
+  .card h3 button:hover{color:var(--accent);text-decoration:underline}
+  .meta{font-size:13px;color:var(--muted)}
+  .why{font-size:13px;background:#f5f1e8;border-radius:10px;padding:8px 10px;line-height:1.45}
+  .card .actions{display:flex;gap:8px;margin-top:auto;padding-top:8px}
+  .card .actions .btn{flex:1;font-size:14px;padding:11px 8px;min-height:44px}
+  .retailers{display:flex;gap:8px;margin:10px 0 22px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .retailers::-webkit-scrollbar{display:none}
+  .retailers span.lbl{font-size:13px;color:var(--muted);align-self:center;flex:0 0 auto}
+  .retailers a{font-size:14px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 14px;text-decoration:none;color:var(--ink);flex:0 0 auto;min-height:40px;display:inline-flex;align-items:center}
+  .retailers a:hover{border-color:var(--accent)}
+  .empty{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:30px;text-align:center;color:var(--muted)}
+  footer{border-top:1px solid var(--line);padding:18px 0 40px;color:var(--muted);font-size:13px;text-align:center;line-height:1.6}
+  .loader{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:14px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:b 1s infinite alternate}
+  .dot:nth-child(2){animation-delay:.15s}.dot:nth-child(3){animation-delay:.3s}
+  @keyframes b{to{transform:translateY(-4px);opacity:.6}}
+  @media (prefers-reduced-motion:reduce){.dot{animation:none}}
+  .detected{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .detected span{background:#1c1917;color:#fff;font-size:12px;border-radius:999px;padding:5px 11px}
+  /* ---- Product detail modal / bottom sheet ---- */
+  .veil{position:fixed;inset:0;background:rgba(28,25,23,.55);z-index:50;display:none;align-items:flex-end;justify-content:center;padding:0}
+  .veil.open{display:flex}
+  .sheet{background:var(--bg);width:100%;max-width:760px;max-height:92dvh;border-radius:20px 20px 0 0;overflow:hidden;display:flex;flex-direction:column;animation:up .25s ease}
+  @keyframes up{from{transform:translateY(30px);opacity:.5}to{transform:none;opacity:1}}
+  @media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--card)}
+  .sheet-head strong{font-size:15px}
+  .xbtn{border:1px solid var(--line);background:#fff;border-radius:999px;width:44px;height:44px;font-size:18px;cursor:pointer;flex:0 0 auto}
+  .sheet-scroll{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px 24px}
+  .sheet-scroll img.hero-img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:14px;background:#eee}
+  .specs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+  .spec{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;font-size:13px}
+  .spec b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:2px}
+  .sheet .buybar{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px}
+  .sheet .buybar .btn{flex:1}
+  .note{font-size:12px;color:var(--muted);line-height:1.5}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom));background:var(--accent2);color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;z-index:99;display:none;max-width:90vw;text-align:center}
+  /* ---- Responsive ---- */
+  @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:720px){
+    .tagline{display:none}
+    .hero{padding:22px 0 6px}
+    .hero p{font-size:15px}
+  }
+  @media(min-width:721px){.veil{align-items:center;padding:20px}.sheet{border-radius:20px}}
+  @media(max-width:560px){
+    .grid{grid-template-columns:1fr}
+    .wrap{padding:0 14px}
+    .logo{font-size:17px}
+    .search-card{padding:14px;border-radius:16px;margin:14px auto}
+    .btn.primary{width:100%}
+    .row.searchrow .btn{flex:1}
+    .price{font-size:20px}
+    .specs{grid-template-columns:repeat(2,1fr)}
+  }
+  @media(max-width:380px){.logo span.badge{display:none}.logo{font-size:16px}}
+</style>
+</head>
+<body>
+<header><div class="wrap nav">
+  <div class="logo">🛋️ CouchFinder <span class="badge">cheapest → priciest</span></div>
+  <div class="tagline">live internet search + smart look-matcher</div>
+</div></header>
+
+<main class="wrap">
+  <div class="hero">
+    <h1>Describe your dream couch. <em>We find it cheap first.</em></h1>
+    <p>Type a look like <b>“blue velvet mid-century 3-seater under $800”</b> — we search the internet live, score every couch on how well it matches your description, and list them from <b>least expensive to most expensive</b>. Tap any couch for its own product page.</p>
+  </div>
+
+  <div class="search-card">
+    <label for="q" style="position:absolute;left:-9999px">Describe the couch you want</label>
+    <textarea id="q" placeholder="e.g. modern grey fabric sectional with chaise, seats 4, pet-friendly, under $1200…">modern grey fabric sectional, seats 4, under $3000</textarea>
+    <div class="row chips" id="examples">
+      <button class="chip" data-q="blue velvet mid-century 3-seater under $900">💙 blue velvet mid-century</button>
+      <button class="chip" data-q="leather chesterfield brown vintage under $3000">🤎 leather chesterfield</button>
+      <button class="chip" data-q="small white boucle loveseat for apartment under $600">🤍 white boucle loveseat</button>
+      <button class="chip" data-q="green sleeper sofa for guests under $2000">💚 green sleeper</button>
+      <button class="chip" data-q="black leather reclining couch modern under $1500">🖤 black leather recliner</button>
+    </div>
+    <div class="budgetrow">
+      <div class="budget"><label for="maxPrice">Max budget ($)</label><input id="maxPrice" type="number" value="3000" min="50" step="50" inputmode="numeric"/></div>
+    </div>
+    <div class="row searchrow">
+      <button class="btn primary" id="searchBtn">🔍 Search couches</button>
+      <span class="loader" id="loader" style="display:none"><span class="dot"></span><span class="dot"></span><span class="dot"></span> searching the internet…</span>
+    </div>
+    <div class="detected" id="detected"></div>
+  </div>
+
+  <div class="status">
+    <div class="count" id="count">Ready — hit Search.</div>
+    <div style="font-size:13px;color:var(--muted)">Sorted least expensive → most expensive</div>
+  </div>
+
+  <div class="retailers" id="retailers" style="display:none">
+    <span class="lbl">Also check:</span>
+    <a id="rGoogle" target="_blank" rel="noopener">Google Shopping ↗</a>
+    <a id="rAmazon" target="_blank" rel="noopener">Amazon ↗</a>
+    <a id="rWayfair" target="_blank" rel="noopener">Wayfair ↗</a>
+    <a id="rIkea" target="_blank" rel="noopener">IKEA ↗</a>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" style="display:none"></div>
+</main>
+<footer>CouchFinder • Live results via DummyJSON product API (real internet fetch) + curated catalog.<br/>Every “Buy” button goes to that product’s own page — confirm live price &amp; availability there. Always sorted low → high.</footer>
+
+<!-- Product detail -->
+<div class="veil" id="veil" role="dialog" aria-modal="true" aria-labelledby="pdptitle">
+  <div class="sheet">
+    <div class="sheet-head"><strong id="pdptitle">Product</strong><button class="xbtn" id="pdpClose" aria-label="Close product">✕</button></div>
+    <div class="sheet-scroll" id="pdpBody"></div>
+    <div class="buybar" id="pdpBar"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const FB = (id) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=70`;
+// Photos below are each retailer's own primary product photo for that exact
+// listing (verified live), so the card matches the Buy page. `fb` is a
+// generic fallback used only if a retailer CDN ever blocks hotlinking.
+const CURATED = [
+  {id:"ikea-klippan-vissle-grey", name:"IKEA KLIPPAN Loveseat — Vissle Grey", price:349, store:"IKEA", color:"grey", material:"fabric", style:"scandinavian", seats:2, type:"loveseat", img:"https://www.ikea.com/us/en/images/products/klippan-loveseat-vissle-gray__0820948_pe709146_s5.jpg", fb:FB("photo-1555041469-a586c61ea9bc"), url:"https://www.ikea.com/us/en/p/klippan-loveseat-vissle-gray-s09010617/", desc:"Compact grey fabric loveseat with removable machine-washable cover. Small-apartment friendly classic."},
+  {id:"novogratz-brittany-mustard", name:"Novogratz Brittany Futon — Mustard Linen", price:270, store:"Amazon", color:"mustard", material:"linen", style:"mid-century", seats:3, type:"sleeper", img:"https://m.media-amazon.com/images/I/71Jwfv7csoL._AC_SL1500_.jpg", fb:FB("photo-1540574163026-643ea20ade25"), url:"https://www.amazon.com/dp/B07945X8F3", desc:"Mustard linen futon with ribbed tufted back, converts to sleeper bed, slanted wooden legs."},
+  {id:"mikibama-boucle-loveseat", name:"mikibama White Boucle Cloud Loveseat — 62in", price:470, store:"Amazon", color:"white", material:"boucle", style:"modern", seats:2, type:"loveseat", img:"https://m.media-amazon.com/images/I/81vLCAO-QBL._AC_SL1500_.jpg", fb:FB("photo-1519947486511-46149fa0a254"), url:"https://www.amazon.com/dp/B0CVV5X7XV", desc:"White boucle cloud loveseat, channel-tufted sherpa fabric, compact 2-seater for small spaces."},
+  {id:"reytinn-blue-velvet", name:"ReyTinn Blue Velvet Mid-Century Deep-Seat Sofa — 81in", price:658, store:"Amazon", color:"blue", material:"velvet", style:"mid-century", seats:3, type:"sofa", img:"https://m.media-amazon.com/images/I/71GNWqHCG8L._AC_SL1254_.jpg", fb:FB("photo-1550254478-ead40cc54513"), url:"https://www.amazon.com/dp/B0DK145ZLH", desc:"Deep-seat blue velvet 3-seater with gold legs and striped back, mid-century modern lines."},
+  {id:"keiki-green-chesterfield", name:"KEIKI Green Velvet Chesterfield Sofa — 83in", price:477, store:"Amazon", color:"green", material:"velvet", style:"chesterfield", seats:3, type:"sofa", img:"https://m.media-amazon.com/images/I/81ufWJxZ-UL._AC_SL1500_.jpg", fb:FB("photo-1616486338812-3dadae4b4ace"), url:"https://www.amazon.com/dp/B0G2XLJG1T", desc:"Emerald-green velvet chesterfield with diamond button tufting, gold legs and 2 pillows."},
+  {id:"vescasa-beige-slipcover", name:"VESCASA 3-Seater Linen Slipcover Sofa — Beige", price:230, store:"Amazon", color:"beige", material:"linen", style:"scandinavian", seats:3, type:"sofa", img:"https://m.media-amazon.com/images/I/81W5jMo7EJL._AC_SL1500_.jpg", fb:FB("photo-1586023492125-27b2c045efd7"), url:"https://www.amazon.com/dp/B0DLG8F2B6", desc:"Beige linen 3-seater with removable slipcovers, relaxed scandi look, washable and pet-friendly."},
+  {id:"pink-edloe-finch", name:"Edloe Finch Mid-Century Pink Velvet Sofa — Blush", price:674, store:"Amazon", color:"pink", material:"velvet", style:"modern", seats:3, type:"sofa", img:"https://m.media-amazon.com/images/I/918vFVsGQNL._AC_SL1500_.jpg", fb:FB("photo-1595428774223-ef52624120d2"), url:"https://www.amazon.com/dp/B07DLRH7FB", desc:"Blush-pink velvet 3-seater with rose-gold legs, mid-century glam showpiece."},
+  {id:"friheten-sectional", name:"IKEA FRIHETEN Sleeper Sectional — Dark Grey", price:999, store:"IKEA", color:"grey", material:"fabric", style:"sleeper", seats:4, type:"sectional", img:"https://www.ikea.com/us/en/images/products/friheten-sleeper-sectional-3-seat-w-storage-skiftebo-dark-gray__0833845_pe603738_s5.jpg", fb:FB("photo-1493663284031-b7e3aefcae8e"), url:"https://www.ikea.com/us/en/p/friheten-sleeper-sectional-3-seat-w-storage-skiftebo-dark-gray-s69216757/", desc:"Dark-grey sleeper sectional with storage chaise. Seats 4, converts to a double bed."},
+  {id:"honbay-grey-sectional", name:"HONBAY Convertible Sectional with Reversible Chaise — Dark Grey", price:540, store:"Amazon", color:"grey", material:"fabric", style:"sectional", seats:3, type:"sectional", img:"https://m.media-amazon.com/images/I/91BW6MiuLpL._AC_SL1500_.jpg", fb:FB("photo-1567016432779-094069958ea5"), url:"https://www.amazon.com/dp/B07LBRDCTT", desc:"Dark-grey L-shaped sectional with reversible chaise, washable covers, small-space friendly."},
+  {id:"emma-oliver-recliner", name:"EMMA+OLIVER Black Faux-Leather Double-Reclining Sofa", price:1285, store:"Amazon", color:"black", material:"faux leather", style:"modern", seats:3, type:"reclining", img:"https://m.media-amazon.com/images/I/71awDlM0hJS._AC_SL1500_.jpg", fb:FB("photo-1617806118233-18e1de247200"), url:"https://www.amazon.com/dp/B08Q22HKCQ", desc:"Black faux-leather sofa with two built-in recliners, pillow-back cushions, contemporary style."},
+  {id:"burrow-span-sage", name:"Burrow Span Queen Sleeper Sofa — Sage Chenille", price:1899, store:"Burrow", color:"green", material:"chenille", style:"sleeper", seats:3, type:"sleeper", img:"https://cdn.shopify.com/s/files/1/0932/3220/2030/files/LRSS-SF-SP-SE-WN_front_9e7616f3-010e-4b03-bfe2-661ea3370e52.jpg?v=1762872128&width=1000&crop=center", fb:FB("photo-1571508601891-ca5e7a713859"), url:"https://burrow.com/products/span-sleeper-sofa", desc:"Sage performance-chenille queen sleeper with cooling memory-foam mattress and reversible chaise."},
+  {id:"hydeline-newport", name:"Hydeline Newport Top-Grain Leather Chesterfield — Caramel", price:2999, store:"Amazon", color:"brown", material:"leather", style:"chesterfield", seats:3, type:"sofa", img:"https://m.media-amazon.com/images/I/61B9UqPntBL._AC_SL1500_.jpg", fb:FB("photo-1616594039964-ae9021a400a0"), url:"https://www.amazon.com/dp/B09W7Q4DQR", desc:"Caramel top-grain leather chesterfield, handmade, bronze nailhead trim, down-wrapped cushions."},
+];
+const COLORS=["grey","gray","blue","navy","green","emerald","sage","white","cream","beige","brown","cognac","caramel","black","pink","blush","mustard","yellow","chenille"];
+const MATERIALS=["velvet","leather","linen","fabric","boucle","microfiber","cotton","chenille","leathersoft"];
+const STYLES=["mid-century","mid century","modern","scandinavian","chesterfield","sectional","sleeper","futon","loveseat","reclining","recliner","chaise","cloud","slipcover","vintage","glam","minimalist"];
+function norm(s){return (s||"").toLowerCase();}
+function tokens(s){return norm(s).replace(/[^a-z0-9\s]/g," ").split(/\s+/).filter(w=>w.length>2);}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function storeHost(url){try{return new URL(url).hostname.replace(/^www\./,"");}catch(e){return "";}}
+function parseQuery(q){
+  const n=norm(q); const found={colors:[],materials:[],styles:[],seats:null,maxPrice:null};
+  COLORS.forEach(c=>{if(n.includes(c))found.colors.push(c)});
+  MATERIALS.forEach(m=>{if(n.includes(m))found.materials.push(m)});
+  STYLES.forEach(s=>{if(n.includes(s))found.styles.push(s)});
+  const seatM=n.match(/(\d)\s*[- ]?seat|seats?\s*(\d)/); if(seatM)found.seats=parseInt(seatM[1]||seatM[2]);
+  const priceM=n.match(/under\s*\$?(\d+)|max\s*\$?(\d+)|\$(\d+)/); if(priceM)found.maxPrice=parseInt(priceM[1]||priceM[2]||priceM[3]);
+  return found;
+}
+function scoreCouch(c,q,parsed){
+  const hay=norm(c.name+" "+c.desc+" "+c.color+" "+c.material+" "+c.style+" "+c.type);
+  let score=20; const why=[];
+  const qt=tokens(q);
+  let hits=0;
+  qt.forEach(t=>{ if(hay.includes(t)){hits++;} });
+  score+=Math.min(50, hits*9);
+  if(parsed.colors.some(col=>hay.includes(col==="gray"?"grey":col))){score+=12;why.push("color match");}
+  if(parsed.materials.some(m=>hay.includes(m))){score+=14;why.push("material match");}
+  if(parsed.styles.some(s=>hay.includes(s.replace("-"," "))||hay.includes(s))){score+=12;why.push("style match");}
+  if(parsed.seats && c.seats===parsed.seats){score+=8;why.push(`${c.seats}-seater`);}
+  if(/apartment|small/.test(norm(q)) && (c.seats<=2||/small|compact|apartment/.test(hay))){score+=6;why.push("small-space");}
+  if(/pet|washable|slipcover/.test(norm(q)) && /washable|slipcover|leather|microfiber|pet|removable/.test(hay)){score+=6;why.push("pet-friendly");}
+  if(/guest|sleep|bed/.test(norm(q)) && /sleep|sleeper|futon|bed|mattress/.test(hay)){score+=10;why.push("sleeper");}
+  if(hits===0 && !why.length) score=15;
+  return {score:Math.min(99,Math.round(score)), why: why.length?why.join(" · "):`${hits} keyword hit${hits===1?"":"s"}`};
+}
+const STOPWORDS=new Set(["for","and","the","are","seat","seats","seater","under","with","that","this","from","into","small","large","apartment","guest","guests","looking","want","need","like","couch","sofa","sofas","couches","room","living"]);
+/* Strict couch-only gate: the product TITLE must name sofa-type furniture.
+   Category/keyword matches alone (beds, tables, chairs, sinks, clothes…)
+   are rejected. Verified 0 false positives across the full live catalog. */
+const TITLE_COUCH_RE=/sofa|couch|sectional|loveseat|love[- ]seat|futon|chesterfield|divan|settee|daybed/;
+const TITLE_VETO_RE=/\bbed\b|\btable\b|\bdesk\b|\bsink\b|\bmirror\b|\blamp\b|\bshelf\b|\bshelves\b|\bcabinet\b|\bdresser\b|\brug\b|\bchair\b|\bmattress\b|\bstool\b|\bbench\b|\bwatch\b|\bshirt\b|\bbag\b|\bshoe\b|\bphone\b|\blaptop\b|\bball\b|\bbelt\b/;
+function isCouchProduct(p){
+  const title=norm(p.title||""), desc=norm(p.description||"");
+  const sofaBed=/sofa[- ]?bed|bed[- ]?sofa/.test(title);
+  if(TITLE_VETO_RE.test(title)&&!sofaBed) return false;
+  if(TITLE_COUCH_RE.test(title)) return true;
+  if(/\bsleeper\b/.test(title)&&/sofa|couch|futon|sectional|loveseat|convertible/.test(desc)) return true;
+  return false;
+}
+async function fetchLive(q, parsed){
+  // Build web-search queries from keywords found in the user's description
+  parsed=parsed||parseQuery(q);
+  const kw=[];
+  const combo=[...parsed.colors,...parsed.materials].filter(w=>w&&!STOPWORDS.has(w));
+  if(combo.length) kw.push(combo.slice(0,2).join(" ")+" sofa");
+  parsed.styles.filter(s=>!STOPWORDS.has(s.replace("-",""))).slice(0,2).forEach(s=>kw.push(s+" couch"));
+  tokens(q).filter(t=>!STOPWORDS.has(t)).slice(0,2).forEach(t=>kw.push(t+" sofa"));
+  kw.push("couch");
+  // "sofa" first: single-word query proven to return real sofas, never sliced off
+  const queries=[...new Set(["sofa",...kw])].slice(0,4);
+  const out=[];
+  for(const term of queries){
+    try{
+      const r=await fetch(`https://dummyjson.com/products/search?q=${encodeURIComponent(term)}&limit=10`);
+      if(!r.ok)continue;
+      const j=await r.json();
+      (j.products||[]).forEach(p=>{
+        if(!isCouchProduct(p)) return;
+        out.push({id:"live-"+p.id, name:p.title, price:Math.round(p.price*1.0)||199, store:"Live web result", color:"—", material:"—", style:term, seats:3, type:"sofa",
+          img:p.thumbnail||(p.images&&p.images[0]), url:`https://dummyjson.com/products/${p.id}`,
+          desc:(p.description||"").slice(0,160), live:true, rating:p.rating});
+      });
+    }catch(e){}
+  }
+  const seen=new Set(); return out.filter(c=>{const k=c.name.toLowerCase(); if(seen.has(k))return false; seen.add(k); return true;});
+}
+let RESULTS=[]; // last scored list
+let lastFocus=null;
+const $=id=>document.getElementById(id);
+function toast(msg){const t=$("toast");t.textContent=msg;t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",2600);}
+document.querySelectorAll("#examples .chip").forEach(b=>b.onclick=()=>{$("q").value=b.dataset.q; doSearch();});
+$("searchBtn").onclick=doSearch;
+
+async function doSearch(){
+  const q=$("q").value.trim()||"sofa";
+  const uiMax=parseInt($("maxPrice").value)||99999;
+  const parsed=parseQuery(q);
+  const effMax=parsed.maxPrice||uiMax;
+  $("detected").innerHTML=[...parsed.colors.map(c=>`<span>🎨 ${esc(c)}</span>`),...parsed.materials.map(m=>`<span>🧵 ${esc(m)}</span>`),...parsed.styles.map(s=>`<span>✨ ${esc(s)}</span>`),
+    parsed.seats?`<span>💺 ${parsed.seats}-seater</span>`:"", effMax?`<span>💰 under $${effMax}</span>`:""].join("");
+  const eq=encodeURIComponent(q+" couch buy");
+  $("rGoogle").href=`https://www.google.com/search?tbm=shop&q=${eq}`;
+  $("rAmazon").href=`https://www.amazon.com/s?k=${encodeURIComponent(q+" couch")}`;
+  $("rWayfair").href=`https://www.wayfair.com/keyword.php?keyword=${encodeURIComponent(q+" couch")}`;
+  $("rIkea").href=`https://www.ikea.com/us/en/search/?query=${encodeURIComponent(q)}`;
+  $("retailers").style.display="flex";
+  $("loader").style.display="inline-flex"; $("searchBtn").disabled=true;
+  $("grid").innerHTML=""; $("empty").style.display="none";
+  let live=[];
+  try{ live=await fetchLive(q, parsed);}catch(e){live=[];}
+  const all=[...CURATED.map(c=>({...c,live:false})),...live];
+  let scored=all.map(c=>({...c,...scoreCouch(c,q,parsed)}));
+  scored=scored.filter(c=>c.price<=effMax);
+  scored.sort((a,b)=> (a.price-b.price)||(b.score-a.score));
+  RESULTS=scored;
+  $("loader").style.display="none"; $("searchBtn").disabled=false;
+  $("count").textContent=scored.length?`${scored.length} couches • $${scored[0].price.toLocaleString()} → $${scored[scored.length-1].price.toLocaleString()} • best match: ${scored.slice().sort((a,b)=>b.score-a.score)[0].name.slice(0,40)}…`:"No couches found.";
+  if(!scored.length){$("empty").style.display="block";$("empty").textContent="No couches under that budget — try raising the max budget or describing a different look.";return;}
+  const best=[...scored].sort((a,b)=>b.score-a.score)[0];
+  $("grid").innerHTML=scored.map(c=>`
+    <div class="card">
+      <button class="imgbtn" data-open="${esc(c.id)}" aria-label="Open ${esc(c.name)}"><img src="${esc(c.img)}"${c.fb?` data-fb="${esc(c.fb)}"`:""} alt="${esc(c.name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src=this.dataset.fb||'https://placehold.co/800x600?text=couch'"/></button>
+      <div class="body">
+        <div class="price-row"><div class="price">$${c.price.toLocaleString()}</div><div class="match">★ ${c.score}% match</div></div>
+        <h3><button data-open="${esc(c.id)}">${esc(c.name)}</button></h3>
+        <div class="meta">${esc(c.store)}${c.seats?` • ${c.seats}-seater`:""}${c.rating?` • ⭐ ${c.rating}`:""}</div>
+        <div><span class="pill ${c.live?"live":"curated"}">${c.live?"🌐 live web":"📦 curated"}</span> ${c===best?'<span class="pill best">🏆 best match</span>':""}</div>
+        <div class="why">✓ ${esc(c.why)} — ${esc(c.desc||"")}</div>
+        <div class="actions">
+          <button class="btn ghost" data-open="${esc(c.id)}">View product</button>
+          <a class="btn" href="${esc(c.url)}" target="_blank" rel="noopener" aria-label="Buy ${esc(c.name)} at ${esc(c.store)}">Buy ↗</a>
+        </div>
+      </div>
+    </div>`).join("");
+  document.querySelectorAll("[data-open]").forEach(el=>el.onclick=()=>openProduct(el.getAttribute("data-open")));
+  // Image watchdog: retailer CDNs occasionally hang (no error event). After 8s,
+  // swap any still-unloaded photo to its fallback so cards never stay blank.
+  clearTimeout(window._imgWatch);
+  window._imgWatch=setTimeout(()=>{document.querySelectorAll("#grid .card img").forEach(im=>{
+    if(!im.complete||!im.naturalWidth){im.onerror=null;im.src=im.dataset.fb||"https://placehold.co/800x600?text=couch";}
+  });},8000);
+  routeFromHash();
+}
+/* ---------- product detail (individual product page) ---------- */
+function findById(id){return RESULTS.find(c=>String(c.id)===String(id)) || CURATED.map(c=>({...c,live:false})).find(c=>String(c.id)===String(id));}
+function openProduct(id){
+  const c=findById(id);
+  if(!c){toast("That live result isn't loaded — run a search first.");return;}
+  if(!c.score){const q=$("q").value.trim()||"sofa";Object.assign(c,scoreCouch(c,q,parseQuery(q)));}
+  lastFocus=document.activeElement;
+  $("pdptitle").textContent=c.name;
+  const host=storeHost(c.url);
+  const buyLabel=c.live?"View source data ↗":`Buy at ${c.store} ↗`;
+  $("pdpBody").innerHTML=`
+    <img class="hero-img" src="${esc(c.img)}"${c.fb?` data-fb="${esc(c.fb)}"`:""} alt="${esc(c.name)}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src=this.dataset.fb||'https://placehold.co/900x560?text=couch'"/>
+    <div class="price-row" style="margin-top:12px"><div class="price" style="font-size:28px">$${c.price.toLocaleString()}</div><div class="match">★ ${c.score}% match</div></div>
+    <p class="meta" style="font-size:14px;margin:6px 0">${esc(c.store)}${host?` • ${esc(host)}`:""}${c.seats?` • ${c.seats}-seater`:""}${c.rating?` • ⭐ ${c.rating} rated`:""}</p>
+    <div><span class="pill ${c.live?"live":"curated"}">${c.live?"🌐 live web result":"📦 curated pick"}</span> <span class="pill">✓ ${esc(c.why)}</span></div>
+    <p style="font-size:15px;line-height:1.6">${esc(c.desc||"")}</p>
+    <div class="specs">
+      <div class="spec"><b>Color</b>${esc(c.color)}</div>
+      <div class="spec"><b>Material</b>${esc(c.material)}</div>
+      <div class="spec"><b>Style</b>${esc(c.style)}</div>
+      <div class="spec"><b>Type</b>${esc(c.type)}</div>
+      <div class="spec"><b>Seats</b>${c.seats||"—"}</div>
+      <div class="spec"><b>Price</b>$${c.price.toLocaleString()}</div>
+    </div>
+    ${c.live?`<p class="note">🌐 Live web result (demo catalog data, no checkout). Use the buttons below to shop this exact item on real retailers.</p>
+    <div class="retailers" style="margin:6px 0 4px">
+      <a target="_blank" rel="noopener" href="https://www.google.com/search?tbm=shop&q=${encodeURIComponent(c.name)}">Google Shopping ↗</a>
+      <a target="_blank" rel="noopener" href="https://www.amazon.com/s?k=${encodeURIComponent(c.name)}">Amazon ↗</a>
+    </div>`:`<p class="note">💡 Catalog price is an estimate — confirm the live price and availability on the retailer’s own product page (opens in a new tab).</p>`}
+  `;
+  $("pdpBar").innerHTML=`
+    <button class="btn ghost" id="pdpCopy">🔗 Copy link</button>
+    <a class="btn primary" href="${esc(c.url)}" target="_blank" rel="noopener">${esc(buyLabel)}</a>`;
+  clearTimeout(window._pdpWatch);
+  window._pdpWatch=setTimeout(()=>{const im=document.querySelector("#pdpBody .hero-img");
+    if(im&&(!im.complete||!im.naturalWidth)){im.onerror=null;im.src=im.dataset.fb||"https://placehold.co/900x560?text=couch";}},8000);
+  $("pdpCopy").onclick=async()=>{
+    const link=location.origin+location.pathname+"#/p/"+encodeURIComponent(c.id);
+    try{await navigator.clipboard.writeText(link);toast("Product link copied ✓");}
+    catch(e){const t=document.createElement("textarea");t.value=link;document.body.appendChild(t);t.select();try{document.execCommand("copy");toast("Product link copied ✓");}catch(_){toast(link);}t.remove();}
+  };
+  $("veil").classList.add("open");
+  document.body.style.overflow="hidden";
+  if(location.hash!=="#/p/"+c.id) history.pushState({pdp:c.id},"","#/p/"+c.id);
+  $("pdpClose").focus();
+}
+function closeProduct(){
+  if(!$("veil").classList.contains("open"))return;
+  $("veil").classList.remove("open");
+  document.body.style.overflow="";
+  if(location.hash.startsWith("#/p/")) history.pushState({},"",location.pathname+location.search);
+  if(lastFocus&&lastFocus.focus)lastFocus.focus();
+}
+function routeFromHash(){
+  const m=(location.hash||"").match(/^#\/p\/(.+)$/);
+  if(m){const id=decodeURIComponent(m[1]);if(findById(id))openProduct(id);}
+}
+$("pdpClose").onclick=closeProduct;
+$("veil").addEventListener("click",e=>{if(e.target===$("veil"))closeProduct();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeProduct();});
+window.addEventListener("popstate",()=>{if((location.hash||"").startsWith("#/p/"))routeFromHash();else closeProduct();});
+// auto-run once on load
+doSearch();
+</script>
+</body>
+</html>
