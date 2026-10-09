@@ -104,10 +104,50 @@ export default function Household() {
     return () => window.removeEventListener('fm-sync', onSync);
   }, [refresh]);
 
+  const useCloud = !!session && isConfigured();
+
+  const resolveMine = async (c: Conflict) => {
+    if (useCloud && session) await resolveKeepMine(c.key, session.user.id);
+    else await resolvePeerKeepMine(c.key);
+    await refresh();
+    setStatus('Kept yours. It wins on the next sync.');
+  };
+
+  const resolveTheirs = async (c: Conflict) => {
+    if (useCloud) await resolveKeepTheirs(c.key);
+    else await resolvePeerKeepTheirs(c.key);
+    await refresh();
+    setStatus('Kept theirs.');
+  };
+
+  const conflictInbox = conflicts.length > 0 && (
+    <article className="card">
+      <h2>⚠ {conflicts.length} conflict{conflicts.length === 1 ? '' : 's'} need your pick</h2>
+      <p className="muted tiny">Both phones changed the same thing. Nothing was overwritten — choose per item.</p>
+      {conflicts.map((c) => {
+        const d = describeConflict(c);
+        return (
+          <div key={c.key} className="conflict">
+            <p><b>{TABLE_LABEL[c.table] ?? c.table}</b></p>
+            <p>Yours: {d.mine}</p>
+            <p>Theirs: {d.theirs}</p>
+            <div className="row gap">
+              <button className="btn primary sm" onClick={() => resolveMine(c)}>Keep mine</button>
+              <button className="btn sm" onClick={() => resolveTheirs(c)}>Keep theirs</button>
+            </div>
+          </div>
+        );
+      })}
+    </article>
+  );
+
   if (!isConfigured()) {
     return (
-      <div className="card">
-        <h2>Household sharing — not connected</h2>
+      <div>
+        <PeerSync onChanged={() => refresh()} />
+        {conflictInbox}
+        <div className="card">
+          <h2>Household sharing — not connected</h2>
         <p>This phone works fully offline. To share with your wife's iPhone:</p>
         <ol className="steps">
           <li>Create a free Supabase project.</li>
@@ -116,6 +156,7 @@ export default function Household() {
           <li>Restart the app — this screen becomes sign-in.</li>
         </ol>
         <p className="muted tiny">Full steps: <code>supabase/SETUP.md</code>. The service_role secret key is never needed.</p>
+        </div>
       </div>
     );
   }
@@ -206,43 +247,6 @@ export default function Household() {
       setBusy(false);
     }
   };
-
-  const useCloud = !!session && isConfigured();
-
-  const resolveMine = async (c: Conflict) => {
-    if (useCloud && session) await resolveKeepMine(c.key, session.user.id);
-    else await resolvePeerKeepMine(c.key);
-    await refresh();
-    setStatus('Kept yours. It wins on the next sync.');
-  };
-
-  const resolveTheirs = async (c: Conflict) => {
-    if (useCloud) await resolveKeepTheirs(c.key);
-    else await resolvePeerKeepTheirs(c.key);
-    await refresh();
-    setStatus('Kept theirs.');
-  };
-
-  const conflictInbox = conflicts.length > 0 && (
-    <article className="card">
-      <h2>⚠ {conflicts.length} conflict{conflicts.length === 1 ? '' : 's'} need your pick</h2>
-      <p className="muted tiny">Both phones changed the same thing. Nothing was overwritten — choose per item.</p>
-      {conflicts.map((c) => {
-        const d = describeConflict(c);
-        return (
-          <div key={c.key} className="conflict">
-            <p><b>{TABLE_LABEL[c.table] ?? c.table}</b></p>
-            <p>Yours: {d.mine}</p>
-            <p>Theirs: {d.theirs}</p>
-            <div className="row gap">
-              <button className="btn primary sm" onClick={() => resolveMine(c)}>Keep mine</button>
-              <button className="btn sm" onClick={() => resolveTheirs(c)}>Keep theirs</button>
-            </div>
-          </div>
-        );
-      })}
-    </article>
-  );
 
   if (!session) {
     return (
