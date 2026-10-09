@@ -46,7 +46,7 @@ export function lastSyncAt(): string | null {
 
 // ---------- table mapping (local Dexie -> Supabase) ----------
 
-interface SyncTable {
+export interface SyncTable {
   key: string;
   remote: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,7 +55,7 @@ interface SyncTable {
   householdField: boolean; // false only for recipe_steps (derived from parent)
 }
 
-const TABLES: SyncTable[] = [
+export const SYNC_TABLES: SyncTable[] = [
   { key: 'recipes', remote: 'recipes', local: () => db.recipes, numerics: ['qty_amount', 'qty_min', 'qty_max'], householdField: true },
   { key: 'recipeIngredients', remote: 'recipe_ingredients', local: () => db.recipeIngredients, numerics: ['qty_amount', 'qty_min', 'qty_max'], householdField: true },
   { key: 'recipeSteps', remote: 'recipe_steps', local: () => db.recipeSteps, numerics: [], householdField: false },
@@ -68,7 +68,7 @@ const TABLES: SyncTable[] = [
   { key: 'budgets', remote: 'budget_settings', local: () => db.budgets, numerics: ['amount_cents'], householdField: true },
 ];
 
-function coerceNumerics(row: Record<string, unknown>, numerics: string[]): Record<string, unknown> {
+export function coerceNumerics(row: Record<string, unknown>, numerics: string[]): Record<string, unknown> {
   const out = { ...row };
   for (const f of numerics) {
     if (out[f] != null && typeof out[f] !== 'number') {
@@ -112,7 +112,7 @@ export async function syncNow(householdId: string, userId: string | null): Promi
   const recipes = (await db.recipes.toArray()) as unknown as Record<string, unknown>[];
   const recipeHouse = new Map(recipes.map((r) => [r.id as string, (r.household_id as string) ?? LOCAL_HOUSEHOLD]));
 
-  for (const t of TABLES) {
+  for (const t of SYNC_TABLES) {
     let remoteRows: Record<string, unknown>[];
     try {
       const { data, error } = await supabase.from(t.remote).select('*').eq('household_id', householdId);
@@ -289,7 +289,7 @@ export async function syncNow(householdId: string, userId: string | null): Promi
 // How many local changes are waiting to upload (for the status pill).
 export async function pendingCount(): Promise<number> {
   let n = 0;
-  for (const t of TABLES) {
+  for (const t of SYNC_TABLES) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const locals = (await t.local().toArray()) as Record<string, unknown>[];
     for (const L of locals) {
@@ -314,7 +314,7 @@ export async function pendingCount(): Promise<number> {
 // ---------- conflict resolution ----------
 
 function tableOf(key: string): SyncTable {
-  const t = TABLES.find((x) => x.key === key);
+  const t = SYNC_TABLES.find((x) => x.key === key);
   if (!t) throw new Error(`Unknown table ${key}`);
   return t;
 }

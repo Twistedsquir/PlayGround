@@ -4,7 +4,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { getSupabase, isConfigured, newInviteCode, sha256Hex } from '../lib/supabase';
+import { resolvePeerKeepMine, resolvePeerKeepTheirs } from '../lib/peerSync';
 import { lastSyncAt, pendingCount, resolveKeepMine, resolveKeepTheirs, syncDb, syncNow, type Conflict } from '../lib/sync';
+import PeerSync from './PeerSync';
 
 export function useAutoSync() {
   useEffect(() => {
@@ -75,6 +77,7 @@ export default function Household() {
   }, []);
 
   const refresh = useCallback(async () => {
+    setConflicts(await syncDb.conflicts.toArray());
     if (!session) return;
     const supabase = getSupabase();
     const { data: ms } = await supabase.from('memberships').select('household_id');
@@ -204,24 +207,66 @@ export default function Household() {
     }
   };
 
+  const useCloud = !!session && isConfigured();
+
+  const resolveMine = async (c: Conflict) => {
+    if (useCloud && session) await resolveKeepMine(c.key, session.user.id);
+    else await resolvePeerKeepMine(c.key);
+    await refresh();
+    setStatus('Kept yours. It wins on the next sync.');
+  };
+
+  const resolveTheirs = async (c: Conflict) => {
+    if (useCloud) await resolveKeepTheirs(c.key);
+    else await resolvePeerKeepTheirs(c.key);
+    await refresh();
+    setStatus('Kept theirs.');
+  };
+
+  const conflictInbox = conflicts.length > 0 && (
+    <article className="card">
+      <h2>⚠ {conflicts.length} conflict{conflicts.length === 1 ? '' : 's'} need your pick</h2>
+      <p className="muted tiny">Both phones changed the same thing. Nothing was overwritten — choose per item.</p>
+      {conflicts.map((c) => {
+        const d = describeConflict(c);
+        return (
+          <div key={c.key} className="conflict">
+            <p><b>{TABLE_LABEL[c.table] ?? c.table}</b></p>
+            <p>Yours: {d.mine}</p>
+            <p>Theirs: {d.theirs}</p>
+            <div className="row gap">
+              <button className="btn primary sm" onClick={() => resolveMine(c)}>Keep mine</button>
+              <button className="btn sm" onClick={() => resolveTheirs(c)}>Keep theirs</button>
+            </div>
+          </div>
+        );
+      })}
+    </article>
+  );
+
   if (!session) {
     return (
-      <div className="card form">
-        <h2>Sign in to sync</h2>
-        <p className="muted tiny">One account per person. Your data stays private to your household.</p>
-        {status && <p className="muted" role="status">{status}</p>}
-        <label>Email<input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" /></label>
-        <label>Password<input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" /></label>
-        <div className="row gap">
-          <button className="btn primary big" disabled={busy} onClick={() => auth('signin')}>Sign in</button>
-          <button className="btn big" disabled={busy} onClick={() => auth('signup')}>Sign up</button>
+      <div>
+        <div className="card form">
+          <h2>Sign in to sync</h2>
+          <p className="muted tiny">One account per person. Your data stays private to your household.</p>
+          {status && <p className="muted" role="status">{status}</p>}
+          <label>Email<input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" /></label>
+          <label>Password<input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" /></label>
+          <div className="row gap">
+            <button className="btn primary big" disabled={busy} onClick={() => auth('signin')}>Sign in</button>
+            <button className="btn big" disabled={busy} onClick={() => auth('signup')}>Sign up</button>
+          </div>
         </div>
+        <PeerSync onChanged={() => refresh()} />
+        {conflictInbox}
       </div>
     );
   }
 
   return (
     <div>
+      <PeerSync onChanged={() => refresh()} />
       <article className="card">
         <div className="row between">
           <div><h2>{householdName || 'Household'}</h2><p className="muted tiny">{session.user.email}</p></div>
@@ -275,34 +320,7 @@ export default function Household() {
         </article>
       )}
 
-      {conflicts.length > 0 && (
-        <article className="card">
-          <h2>⚠ {conflicts.length} conflict{conflicts.length === 1 ? '' : 's'} need your pick</h2>
-          <p className="muted tiny">Both phones changed the same thing. Nothing was overwritten — choose per item.</p>
-          {conflicts.map((c) => {
-            const d = describeConflict(c);
-            return (
-              <div key={c.key} className="conflict">
-                <p><b>{TABLE_LABEL[c.table] ?? c.table}</b></p>
-                <p>Yours: {d.mine}</p>
-                <p>Theirs: {d.theirs}</p>
-                <div className="row gap">
-                  <button className="btn primary sm" onClick={async () => {
-                    await resolveKeepMine(c.key, session.user.id);
-                    await refresh();
-                    setStatus('Kept yours.');
-                  }}>Keep mine</button>
-                  <button className="btn sm" onClick={async () => {
-                    await resolveKeepTheirs(c.key);
-                    await refresh();
-                    setStatus('Kept theirs.');
-                  }}>Keep theirs</button>
-                </div>
-              </div>
-            );
-          })}
-        </article>
-      )}
+      {conflictInbox}
     </div>
   );
 }
