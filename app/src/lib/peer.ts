@@ -97,7 +97,41 @@ function newPc(): RTCPeerConnection {
   return new RTCPeerConnection({ iceServers: [{ urls: STUN }] });
 }
 
-// Host step 1: create an invitation code. Send it to the other phone.
+// ---- SDP-object API (for automatic relay pairing) ----
+
+export interface RawPeer {
+  sdp: RTCSessionDescriptionInit;
+  link: PeerLink;
+  pc: RTCPeerConnection;
+}
+
+// Host step 1 (relay): build an offer, returns the raw SDP to publish.
+export async function createOfferPeer(): Promise<RawPeer> {
+  const pc = newPc();
+  const link = makeLink(pc, 'host');
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  await waitGathering(pc);
+  return { sdp: pc.localDescription as RTCSessionDescriptionInit, link, pc };
+}
+
+// Joiner (relay): consume an offer, returns the raw answer SDP to publish.
+export async function createAnswerPeer(offer: RTCSessionDescriptionInit): Promise<RawPeer> {
+  const pc = newPc();
+  const link = makeLink(pc, 'join');
+  await pc.setRemoteDescription(new RTCSessionDescription(offer));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  await waitGathering(pc);
+  return { sdp: pc.localDescription as RTCSessionDescriptionInit, link, pc };
+}
+
+// Either side (relay): consume the other side's SDP.
+export async function acceptRemotePeer(pc: RTCPeerConnection, sdp: RTCSessionDescriptionInit): Promise<void> {
+  await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+}
+
+// ---- code-based API (for manual fallback, no relay needed) ----
 export async function hostCreateOffer(): Promise<{ code: string; link: PeerLink; pc: RTCPeerConnection }> {
   const pc = newPc();
   const link = makeLink(pc, 'host');
