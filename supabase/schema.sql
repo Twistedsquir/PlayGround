@@ -3,26 +3,11 @@
 -- It creates tables, Row Level Security (one household can never read
 -- another's rows), and three helper functions (create/join/revoke).
 -- Nothing here needs the secret service_role key in the app.
+-- Safe to re-run: every statement uses "if not exists" / "or replace".
 
--- ============ helpers ============
+create extension if not exists pgcrypto;
 
-create or replace function public.is_member(hid uuid)
-returns boolean language sql stable security definer set search_path = public as $$
-  select exists (
-    select 1 from public.memberships m
-    where m.household_id = hid and m.user_id = auth.uid()
-  );
-$$;
-
-create or replace function public.touch_updated_at()
-returns trigger language plpgsql set search_path = public as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
-
--- ============ households / memberships / invites ============
+-- ============ households / memberships / invites (tables first) ============
 
 create table if not exists public.households (
   id uuid primary key default gen_random_uuid(),
@@ -56,6 +41,23 @@ create table if not exists public.invites (
 alter table public.households enable row level security;
 alter table public.memberships enable row level security;
 alter table public.invites enable row level security;
+
+-- Helpers (created AFTER the tables they reference).
+create or replace function public.is_member(hid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.memberships m
+    where m.household_id = hid and m.user_id = auth.uid()
+  );
+$$;
+
+create or replace function public.touch_updated_at()
+returns trigger language plpgsql set search_path = public as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
 
 drop policy if exists "members read own household" on public.households;
 create policy "members read own household" on public.households
